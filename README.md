@@ -1,93 +1,91 @@
-# FHIR Server
+# FHIR
 
+## CLINOMIC FHIR server
 
+To be able to start the project you need to have the following software installed on your machine :
 
-## Getting started
+- docker
+- docker-compose
+- make
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+There are two ways to start the project, one is for development and the other is for production.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+### Development
 
-## Add your files
+To run the project in development mode you have to build the FHIR server first by executing `make build`. After this you 
+only need to execute `make dev`. It will start a FHIR server with a derby database, no security and no validation.
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+#### H2 database
+
+If you want to run this with an in-memory database, use to config from the `application.yaml`. For some reason, 
+the dialect needed for the database is not picked up from the `.env` var, thus putting the dialect in the 
+`application.yaml` is required,
+
+#### OpenSearch - WIP
+
+In order to enable OpenSearch, `hibernate.search.enabled` has to be enabled, so does `advanced_lucene_indexing`.
+
+### Production
+
+The production infrastructure is a bit more complex and needs some systems to be already running, like system logs and
+so forth. To run it the following steps are needed to be executed in order:
+
+- `make start-logs` will start the docker logging functionality
+- `make start-databases` will start the FHIR database
+- `make start-server` will start the FHIR server
+
+The `Dockerfile` comes with a rootless docker image which should be used for production. Building it should be done with
+the following command : `docker build -t ${IMAGE_NAME} --target default .`
+
+### Stopping
+
+It's advised to use the `make stop` (`make stopdev` for development image) command to stop the running containers. 
+In case you also need to remove the containers you need to run `make clean`, or you can combine both commands with 
+`make stop clean`.
+
+The following resources are available :
+
+| Service       | Location                | Credentials |
+|:--------------|:------------------------|:------------|
+| PostgreSQL    | localhost:5432          | admin/admin |
+| FHIR Server   | http://localhost:8080/  |             |
+
+## Makefile
+
+Running / stopping / cleaning and the other utility functions needed to run the different applications is done via the
+usage of a Makefile. Doing so creates a clean interface for the developers and also for a CI/CD environment. Please
+check `Makefile` for more information. The following commands are available from the Makefile :
+
+```makefile
+clean                   Clean everything
+pull-images             Pull all images
+shell                   Opens a command prompt in the FHIR server
+watch-logs              Open a tail on all the logs
+build                   Build the container
+dev                     Start the development image
+start-logs              Start the docker logging plugins
+start-databases         Start the databases used by the different services
+start-server            Start the application
+start                   Alias to start
+stop                    Stop running containers
+stopdev                 Stop running containers (development image)
+restart                 Restart the app
 
 ```
-cd existing_repo
-git remote add origin https://www.clinomic.biz/gsheldija/fhir-server.git
-git branch -M main
-git push -uf origin main
-```
 
-## Integrate with your tools
+Setting the `advanced_lucene_indexing` to `true` will cause the server to not find a ValueSet by its url, neither when 
+searching regularly nor when expanding.
 
-- [ ] [Set up project integrations](https://www.clinomic.biz/gsheldija/fhir-server/-/settings/integrations)
+## Issues
 
-## Collaborate with your team
+In case of issues with the containers, please run `make stop clean`.
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+## Deploying new image
 
-## Test and Deploy
+The push of the docker image is done via `make push-image`.
 
-Use the built-in continuous integration in GitLab.
+## JAVA APM
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+The images ship with [Glowroot](https://glowroot.org/) already installed. In order to have it working you need to add
+`-javaagent:/usr/local/tomcat/glowroot.jar` to the `JAVA_OPTS`. This is enabled by default for the development profile.
+To access it, you need to point your browser to [http://localhost:4000](http://localhost:4000)

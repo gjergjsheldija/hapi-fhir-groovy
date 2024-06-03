@@ -1,0 +1,10 @@
+- module: postgresql
+  metricsets:
+    - database
+    - bgwriter
+    - activity
+    - statement
+  period: 10s
+  hosts: [ "postgres://localhost:5432?sslmode=disable" ]
+  username: '${POSTGRES_USER}'
+  password: '${POSTGRES_PASSWORD}'
