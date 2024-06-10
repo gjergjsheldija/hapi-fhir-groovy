@@ -7,7 +7,7 @@ IP_ADDRESS ?= $(shell ip -o route get to 8.8.8.8 | sed -n 's/.*src \([0-9.]\+\).
 CLINOMIC_NETWORK=clinomic-backend
 GIT_TAG ?= $$(git describe --abbrev=0 --tags)
 
-IMAGE_NAME = ${APPLICATION_NAME}
+IMAGE_NAME = ${DOCKER_REGISTRY}/${APPLICATION_NAME}
 
 help:
 	@echo "\e[32m Usage make [target] "
@@ -37,6 +37,11 @@ watch-logs: ## Open a tail on all the logs
 build: ## Build the container
 	docker build -t ${IMAGE_NAME} --target tomcat .
 .PHONY: build
+
+unit-test: ## Build the container
+	docker build -t ${IMAGE_NAME} --target unit-tests .
+.PHONY: unit-test
+
 
 dev: ## Start the development image
 	@UID=$(UID) GID=$(GID) docker-compose -f docker-compose.yaml -p ${APPLICATION_NAME} up --remove-orphans
