@@ -30,6 +30,8 @@ include:
 
 test:
   stage: test
+  services:
+    - docker:20.10.16-dind
   script:
     - make unit-test
   only:
