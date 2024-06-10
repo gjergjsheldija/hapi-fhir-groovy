@@ -5,10 +5,18 @@
 # Container Scanning customization: https://docs.gitlab.com/ee/user/application_security/container_scanning/#customizing-the-container-scanning-settings
 # Note that environment variables can be set in several places
 # See https://docs.gitlab.com/ee/ci/variables/#cicd-variable-precedence
+image: ubuntu:latest
+
+before_script:
+  - apt-get update -qq
+  - apt-get install -y make
+
 stages:
   - test
   - build
   - deploy
+
+
 sast:
   stage: test
 include:
@@ -26,3 +34,7 @@ test:
     - merge_requests
   tags:
     - docker
+  cache:
+    key: "$CI_COMMIT_REF_SLUG"
+    paths:
+      - .cache/
