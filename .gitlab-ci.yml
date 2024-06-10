@@ -25,9 +25,6 @@ include:
 
 test:
   stage: test
-  image: docker:20.10.16
-  services:
-    - docker:20.10.16-dind
   script:
     - make unit-tests
   only:
