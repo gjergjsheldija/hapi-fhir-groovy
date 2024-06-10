@@ -7,6 +7,8 @@
 # See https://docs.gitlab.com/ee/ci/variables/#cicd-variable-precedence
 variables:
   DOCKER_DRIVER: overlay2
+  DOCKER_HOST: "tcp://docker:2375"
+  DOCKER_TLS_CERTDIR: ""
 
 image: docker:20.10.16-dind
 
@@ -31,7 +33,7 @@ include:
 test:
   stage: test
   services:
-    - docker:20.10.16-dind
+    - docker:dind
   script:
     - make unit-test
   only:
