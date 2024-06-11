@@ -101,6 +101,63 @@ class ExampleServerR4IT implements IServerSupport {
 	}
 
 	@Test
+	@Order(1)
+	void testWebsocketSubscription() throws Exception {
+		/*
+		 * Create subscription
+		 */
+		Subscription subscription = new Subscription();
+		subscription.setReason("Monitor new neonatal function (note, age will be determined by the monitor)");
+		subscription.setStatus(Subscription.SubscriptionStatus.REQUESTED);
+		subscription.setCriteria("Observation?status=final");
+
+		Subscription.SubscriptionChannelComponent channel = new Subscription.SubscriptionChannelComponent();
+		channel.setType(Subscription.SubscriptionChannelType.WEBSOCKET);
+		channel.setPayload("application/json");
+		subscription.setChannel(channel);
+
+		int initialActiveSubscriptionCount = activeSubscriptionCount();
+
+		MethodOutcome methodOutcome = ourClient.create().resource(subscription).execute();
+		IIdType mySubscriptionId = methodOutcome.getId();
+
+		// Wait for the subscription to be activated
+		await().atMost(1, TimeUnit.MINUTES).until(()->activeSubscriptionCount(), equalTo(initialActiveSubscriptionCount + 1));
+
+		/*
+		 * Attach websocket
+		 */
+
+		SocketImplementation mySocketImplementation = new SocketImplementation(mySubscriptionId.getIdPart(),
+			EncodingEnum.JSON);
+
+		URI echoUri = new URI("ws://localhost:" + port + "/websocket");
+
+		WebSocketContainer container = ContainerProvider.getWebSocketContainer();
+
+		ourLog.info("Connecting to : {}", echoUri);
+		Session session = container.connectToServer(mySocketImplementation, echoUri);
+		ourLog.info("Connected to WS: {}", session.isOpen());
+
+		/*
+		 * Create a matching resource
+		 */
+		Observation obs = new Observation();
+		obs.setStatus(Observation.ObservationStatus.FINAL);
+		ourClient.create().resource(obs).execute();
+
+		/*
+		 * Ensure that we receive a ping on the websocket
+		 */
+		waitForSize(1, () -> mySocketImplementation.myPingCount);
+
+		/*
+		 * Clean up
+		 */
+		ourClient.delete().resourceById(mySubscriptionId).execute();
+	}
+
+	@Test
 	public void testCQLEvaluateMeasureEXM130() throws IOException {
 		String measureId = "ColorectalCancerScreeningsFHIR";
 		String measureUrl = "http://ecqi.healthit.gov/ecqms/Measure/ColorectalCancerScreeningsFHIR";
@@ -215,62 +272,6 @@ class ExampleServerR4IT implements IServerSupport {
 		ourClient.transaction().withBundle(bundle).execute();
 	}
 
-	@Test
-	@Order(1)
-	void testWebsocketSubscription() throws Exception {
-		/*
-		 * Create subscription
-		 */
-		Subscription subscription = new Subscription();
-		subscription.setReason("Monitor new neonatal function (note, age will be determined by the monitor)");
-		subscription.setStatus(Subscription.SubscriptionStatus.REQUESTED);
-		subscription.setCriteria("Observation?status=final");
-
-		Subscription.SubscriptionChannelComponent channel = new Subscription.SubscriptionChannelComponent();
-		channel.setType(Subscription.SubscriptionChannelType.WEBSOCKET);
-		channel.setPayload("application/json");
-		subscription.setChannel(channel);
-
-		int initialActiveSubscriptionCount = activeSubscriptionCount();
-
-		MethodOutcome methodOutcome = ourClient.create().resource(subscription).execute();
-		IIdType mySubscriptionId = methodOutcome.getId();
-
-		// Wait for the subscription to be activated
-		await().atMost(1, TimeUnit.MINUTES).until(()->activeSubscriptionCount(), equalTo(initialActiveSubscriptionCount + 1));
-
-		/*
-		 * Attach websocket
-		 */
-
-		SocketImplementation mySocketImplementation = new SocketImplementation(mySubscriptionId.getIdPart(),
-			EncodingEnum.JSON);
-
-		URI echoUri = new URI("ws://localhost:" + port + "/websocket");
-
-		WebSocketContainer container = ContainerProvider.getWebSocketContainer();
-
-		ourLog.info("Connecting to : {}", echoUri);
-		Session session = container.connectToServer(mySocketImplementation, echoUri);
-		ourLog.info("Connected to WS: {}", session.isOpen());
-
-		/*
-		 * Create a matching resource
-		 */
-		Observation obs = new Observation();
-		obs.setStatus(Observation.ObservationStatus.FINAL);
-		ourClient.create().resource(obs).execute();
-
-		/*
-		 * Ensure that we receive a ping on the websocket
-		 */
-		waitForSize(1, () -> mySocketImplementation.myPingCount);
-
-		/*
-		 * Clean up
-		 */
-		ourClient.delete().resourceById(mySubscriptionId).execute();
-	}
 
 	@Test
 	void testCareGaps() throws IOException {

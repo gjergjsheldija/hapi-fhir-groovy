@@ -41,6 +41,11 @@ unit-test: ## Build the container
 	docker build -t ${IMAGE_NAME} --target unit-tests .
 .PHONY: unit-test
 
+integration-tests: ## Start the databases used by the different services
+	# Start all containers
+	docker compose -p ${APPLICATION_NAME} up -d --remove-orphans karate
+.PHONY: integration-tests
+
 dev: ## Start the development image
 	@UID=$(UID) GID=$(GID) docker compose -f docker-compose.yaml -p ${APPLICATION_NAME} up --remove-orphans
 .PHONY: dev
@@ -60,9 +65,9 @@ start:	start-databases start-server
 .PHONY: start
 
 push-image: ## Push image to the internal docker registry
-	docker tag ${IMAGE_NAME} ${IMAGE_NAME}:${GIT_TAG}
+	docker build -t ${IMAGE_NAME}:${GIT_TAG} .
 	docker push ${IMAGE_NAME}:${GIT_TAG}
-.PHONY: push-imag
+.PHONY: push-image
 
 stop: ## Stop running containers
 	docker compose -p ${APPLICATION_NAME} stop

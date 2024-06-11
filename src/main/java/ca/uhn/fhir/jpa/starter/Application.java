@@ -30,7 +30,6 @@ import org.springframework.context.annotation.Import;
 @SpringBootApplication(exclude = {
 	ElasticsearchRestClientAutoConfiguration.class,
 	ThymeleafAutoConfiguration.class})
-@ComponentScan({"ca.uhn.fhir.jpa.starter", "com.clinomic.configuration"})
 @Import({
 	StarterCrR4Config.class,
 	StarterCrDstu3Config.class,

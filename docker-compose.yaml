@@ -26,6 +26,22 @@ services:
     volumes:
       - postgres:/var/lib/postgresql/data/pgdata
 
+  karate:
+    entrypoint: '/wait-for-it.sh clinomic-fhir-server:8080/fhir -t 60 -- java -cp "/utils/*" com.intuit.karate.Main'
+    image: docker.io/library/karate:a17d388eedf69f981259b669b7f3c0f06f533c70
+    environment:
+      URL_BASE: 'http://clinomic-fhir-server:8080/fhir'
+    volumes:
+      - ./tests:/tests
+    user: "${UID}:${GID}"
+    command:
+      - "/tests/configuration/custom-configuration.feature"
+      - "/tests/utils.feature"
+    depends_on:
+      - clinomic-fhir-postgres
+      - clinomic-fhir-server
+
+
 volumes:
   postgres:
     driver: local

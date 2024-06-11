@@ -173,7 +173,7 @@ hapi:
     search-coord-queue-capacity: 200
 
     # comma-separated package names, will be @ComponentScan'ed by Spring to allow for creating custom Spring beans
-    #    custom-bean-packages: com.clinomic.configuration
+    custom-bean-packages: ca.uhn.fhir.jpa.starter, com.clinomic.configuration
 
     # comma-separated list of fully qualified interceptor classes.
     # classes listed here will be fetched from the Spring context when combined with 'custom-bean-packages',
@@ -183,8 +183,8 @@ hapi:
     # comma-separated list of fully qualified provider classes.
     # classes listed here will be fetched from the Spring context when combined with 'custom-bean-packages',
     # or will be instantiated via reflection using an no-arg contructor; then registered with the server
-    #    custom-provider-classes:
-    #      - com.clinomic.configuration.CustomConfigurationResourceProvider
+    custom-provider-classes:
+      - com.clinomic.configuration.ConfigurationResourceProvider
 
     # Threadpool size for BATCH'ed GETs in a bundle.
     #    bundle_batch_pool_size: 10
@@ -201,8 +201,8 @@ hapi:
     name: fhirtest.access
     max_binary_size: 104857600
     max_page_size: 200
-    retain_cached_searches_mins: 60
-    reuse_cached_search_results_millis: 60000
+    retain_cached_searches_mins: 0
+    reuse_cached_search_results_millis: 0
     tester:
       home:
         name: Local Tester
