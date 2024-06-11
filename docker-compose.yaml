@@ -1,6 +1,8 @@
 services:
-  clinomic-fhir-dev:
-    build: .
+  clinomic-fhir-server:
+    build:
+      context: .
+      target: tomcat
     env_file:
       - .env
     ports:

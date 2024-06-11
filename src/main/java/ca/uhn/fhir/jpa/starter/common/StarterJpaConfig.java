@@ -62,13 +62,9 @@ import ca.uhn.fhir.rest.server.tenant.UrlBaseTenantIdentificationStrategy;
 import ca.uhn.fhir.rest.server.util.ISearchParamRegistry;
 import ca.uhn.fhir.validation.IValidatorModule;
 import ca.uhn.fhir.validation.ResultSeverityEnum;
-import com.clinomic.configuration.CustomConfiguration;
-import com.clinomic.configuration.CustomConfigurationBean;
-import com.clinomic.configuration.CustomConfigurationResourceProvider;
 import com.google.common.base.Strings;
 import jakarta.persistence.EntityManagerFactory;
 import org.hl7.fhir.common.hapi.validation.support.CachingValidationSupport;
-import org.hl7.fhir.r4.model.StringType;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -250,9 +246,6 @@ public class StarterJpaConfig {
 	}
 
 
-	@Autowired
-	private CustomConfigurationBean customConfigurationBean;
-
 	@Bean
 	public RestfulServer restfulServer(
 			IFhirSystemDao<?, ?> fhirSystemDao,
@@ -303,8 +296,6 @@ public class StarterJpaConfig {
 
 		if (appProperties.getMdm_enabled()) mdmProviderProvider.get().loadProvider();
 
-
-		fhirServer.setResourceProviders(customConfigurationBean.rpCustomConfiguration());
 
 		fhirServer.registerProviders(resourceProviderFactory.createProviders());
 		fhirServer.registerProvider(jpaSystemProvider);
