@@ -70,6 +70,8 @@ start                   Alias to start
 stop                    Stop running containers
 stopdev                 Stop running containers (development image)
 restart                 Restart the app
+integration-tests       Run API tests
+unit-test               Run unit tests
 
 ```
 
@@ -84,8 +86,7 @@ In case of issues with the containers, please run `make stop clean`.
 
 The push of the docker image is done via `make push-image`.
 
-## JAVA APM
+## Clinomic specific
 
-The images ship with [Glowroot](https://glowroot.org/) already installed. In order to have it working you need to add
-`-javaagent:/usr/local/tomcat/glowroot.jar` to the `JAVA_OPTS`. This is enabled by default for the development profile.
-To access it, you need to point your browser to [http://localhost:4000](http://localhost:4000)
+Clinomic specific customizations can be found in the `doc` directory.
+
