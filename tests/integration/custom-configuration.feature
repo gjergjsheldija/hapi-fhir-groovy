@@ -128,7 +128,7 @@ Feature: Test the custom Configuration resource
 
   Scenario: Create search parameters and validate them for the custom Configuration resource
     * call read('this:../utils.feature@name=expunge')
-    * call sleep 3
+    * call sleep 5
     * call read('@create_configuration')
       # search for resources : partial name
     Given url `${urlBase}/Configuration?configuration-name:contains=stra`

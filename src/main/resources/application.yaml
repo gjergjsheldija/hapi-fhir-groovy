@@ -46,16 +46,15 @@ spring:
       #      hibernate.cache.use_minimal_puts: false
 
       ###    These settings will enable fulltext search with lucene or elastic
-  #      hibernate.search.enabled: true
-  #      ### lucene parameters
-      hibernate.search.backend.type: lucene
-  #      hibernate.search.backend.analysis.configurer: ca.uhn.fhir.jpa.search.HapiHSearchAnalysisConfigurers$HapiLuceneAnalysisConfigurer
+      hibernate.search.enabled: true
+      #### lucene parameters
       hibernate.search.backend.directory.type: local-filesystem
       hibernate.search.backend.directory.root: target/lucenefiles
-  #      hibernate.search.backend.lucene_version: lucene_current
-  ### elastic parameters ===> see also elasticsearch section below <===
-#      hibernate.search.backend.type: elasticsearch
-#      hibernate.search.backend.analysis.configurer: ca.uhn.fhir.jpa.search.HapiHSearchAnalysisConfigurers$HapiElasticAnalysisConfigurer
+      #hibernate.search.backend.lucene_version: lucene_current
+      ### elastic parameters ===> see also elasticsearch section below <===
+      hibernate.search.backend.type: lucene
+      hibernate.search.backend.lucene_version: LUCENE_CURRENT
+      hibernate.search.backend.analysis.configurer: ca.uhn.fhir.jpa.search.HapiHSearchAnalysisConfigurers$HapiLuceneAnalysisConfigurer
 hapi:
   fhir:
     ### This flag when enabled to true, will avail evaluate measure operations from CR Module.
@@ -131,8 +130,8 @@ hapi:
     ###  !!Extended Lucene/Elasticsearch Indexing is still a experimental feature, expect some features (e.g. _total=accurate) to not work as expected!!
     ###  more information here: https://hapifhir.io/hapi-fhir/docs/server_jpa/elastic.html
     advanced_lucene_indexing: false
-    bulk_export_enabled: false
-    bulk_import_enabled: false
+    bulk_export_enabled: true
+    bulk_import_enabled: true
     language_search_parameter_enabled: true
     enforce_referential_integrity_on_delete: false
     # This is an experimental feature, and does not fully support _total and other FHIR features.
@@ -173,16 +172,18 @@ hapi:
     search-coord-queue-capacity: 200
 
     # comma-separated package names, will be @ComponentScan'ed by Spring to allow for creating custom Spring beans
-    custom-bean-packages: ca.uhn.fhir.jpa.starter, com.clinomic.configuration
+    custom-bean-packages: ca.uhn.fhir.jpa.starter, com.clinomic
 
     # comma-separated list of fully qualified interceptor classes.
     # classes listed here will be fetched from the Spring context when combined with 'custom-bean-packages',
-    # or will be instantiated via reflection using an no-arg contructor; then registered with the server
-    #custom-interceptor-classes:
+    # or will be instantiated via reflection using an no-arg constructor; then registered with the server
+    custom-interceptor-classes:
+      - ca.uhn.fhir.jpa.subscription.util.SubscriptionDebugLogInterceptor
+      - com.clinomic.auditevent.AuditEventInterceptor
 
     # comma-separated list of fully qualified provider classes.
     # classes listed here will be fetched from the Spring context when combined with 'custom-bean-packages',
-    # or will be instantiated via reflection using an no-arg contructor; then registered with the server
+    # or will be instantiated via reflection using an no-arg constructor; then registered with the server
     custom-provider-classes:
       - com.clinomic.configuration.ConfigurationResourceProvider
 
@@ -190,15 +191,15 @@ hapi:
     #    bundle_batch_pool_size: 10
     #    bundle_batch_pool_max_size: 50
 
-  logger:
-    error_format: 'ERROR - ${requestVerb} ${requestUrl}'
-    format: >-
-      Path[${servletPath}] Source[${requestHeader.x-forwarded-for}]
-      Operation[${operationType} ${operationName} ${idOrResourceName}]
-      UA[${requestHeader.user-agent}] Params[${requestParameters}]
-      ResponseEncoding[${responseEncodingNoDefault}]
-    log_exceptions: true
-    name: fhirtest.access
+    logger:
+      error_format: 'ERROR - ${requestVerb} ${requestUrl}'
+      format: >-
+        Path[${servletPath}] Source[${requestHeader.x-forwarded-for}]
+        Operation[${operationType} ${operationName} ${idOrResourceName}]
+        UA[${requestHeader.user-agent}] Params[${requestParameters}]
+        ResponseEncoding[${responseEncodingNoDefault}]
+      log_exceptions: true
+      name: fhirtest.access
     max_binary_size: 104857600
     max_page_size: 200
     retain_cached_searches_mins: 0
@@ -232,13 +233,20 @@ hapi:
         startTlsEnable:
         startTlsRequired:
         quitWait:
-    lastn_enabled: true
+    lastn_enabled: false
     store_resource_in_lucene_index_enabled: true
+
 ###  This is configuration for normalized quantity search level default is 0
 ###   0: NORMALIZED_QUANTITY_SEARCH_NOT_SUPPORTED - default
 ###   1: NORMALIZED_QUANTITY_STORAGE_SUPPORTED
 ###   2: NORMALIZED_QUANTITY_SEARCH_SUPPORTED
 #    normalized_quantity_search_level: 2
+
+    ##############
+    ## Clinomic ##
+    ##############
+    audit_event: ${AUDIT_EVENT:false}
+
 #elasticsearch:
 #  debug:
 #    pretty_print_json_log: false

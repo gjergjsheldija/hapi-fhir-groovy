@@ -3,8 +3,24 @@ services:
     build:
       context: .
       target: tomcat
-    env_file:
-      - .env
+    environment:
+      APPLICATION_NAME: fhir-server
+      SERVER_ADDRESS: 0.0.0.0
+      REQUEST_VALIDATION: false
+      RESPONSE_VALIDATION: false
+      SQL_DIALECT: ca.uhn.fhir.jpa.model.dialect.HapiFhirH2Dialect
+      SQL_DRIVER: org.h2.Driver
+      SQL_URL: jdbc:h2:mem:test_mem
+      SQL_USERNAME: sa
+      SQL_PASSWORD: null
+      OPENSEARCH_ENABLED: false
+      OPENSEARCH_URL: localhost:9200
+      OPENSEARCH_USERNAME: admin
+      OPENSEARCH_PASSWORD: admin
+      SUBSCRIPTION_REST_ENABLED: false
+      SUBSCRIPTION_EMAIL_ENABLED: false
+      SUBSCRIPTION_WEBSOCKET_ENABLED: false
+      AUDIT_EVENT: false
     ports:
       - "8080:8080"
     volumes:
@@ -28,7 +44,7 @@ services:
 
   karate:
     entrypoint: '/wait-for-it.sh clinomic-fhir-server:8080/fhir -t 60 -- java -cp "/utils/*" com.intuit.karate.Main'
-    image: www.clinomic.biz:5050/mona/karate:0.0.1
+    image: www.clinomic.biz:5050/gsheldija/karate-samples:0.0.1
     environment:
       URL_BASE: 'http://clinomic-fhir-server:8080/fhir'
     volumes:
