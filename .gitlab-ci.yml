@@ -1,6 +1,7 @@
 variables:
   DOCKER_TLS_CERTDIR: ""
   APPLICATION_NAME: "fhir-server"
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
 
 stages:
   - test
@@ -14,6 +15,7 @@ include:
   - template: Security/SAST.gitlab-ci.yml
 
 cache:
+  key: ${CI_PROJECT_NAME}
   paths:
     - .m2/repository
 
@@ -24,14 +26,27 @@ sast:
   tags:
     - docker
 
+build:
+  stage: build
+  image: maven:3.8.1-jdk-11
+  script:
+    - mvn install -DskipTests
+  artifacts:
+    paths:
+      - target/*.jar
+
 unit-test:
   stage: test
   image: docker.io/library/maven:3.9.4-eclipse-temurin-17
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - target/surefire-reports/*.xml
+    paths:
+      - target/surefire-reports/
+    expire_in: 1 week
   script:
     - mvn test
   only:
     - merge_requests
-  cache:
-    key: "$CI_COMMIT_REF_SLUG"
-    paths:
-      - .cache/

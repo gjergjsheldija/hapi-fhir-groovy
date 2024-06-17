@@ -41,7 +41,7 @@ unit-test: ## Build the container
 	docker build -t ${IMAGE_NAME} --target unit-tests .
 .PHONY: unit-test
 
-integration-tests: ## Start the databases used by the different services
+integration-tests: ## Start karate integration tests
 	# Start all containers
 	docker compose -p ${APPLICATION_NAME} up -d --remove-orphans karate
 .PHONY: integration-tests

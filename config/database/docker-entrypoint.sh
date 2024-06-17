@@ -7,5 +7,5 @@ metricbeat modules enable postgresql
 metricbeat setup -e
 service metricbeat start
 
-./docker-entrypoint.sh postgres -c shared_preload_libraries=pg_stat_statements
+/usr/local/bin/docker-entrypoint.sh postgres -c shared_preload_libraries=pg_stat_statements
 

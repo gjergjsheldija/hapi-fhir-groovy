@@ -1,10 +1,10 @@
-FROM postgres:12.4
+FROM postgres:16
 
 RUN apt update && \
     apt install curl gettext-base -y && \
-    curl -L -O https://artifacts.elastic.co/downloads/beats/metricbeat/metricbeat-7.9.0-amd64.deb && \
-    dpkg -i metricbeat-7.9.0-amd64.deb && \
-    rm metricbeat-7.9.0-amd64.deb
+    curl -L -O https://artifacts.elastic.co/downloads/beats/metricbeat/metricbeat-8.14.1-amd64.deb && \
+    dpkg -i metricbeat-8.14.1-amd64.deb && \
+    rm metricbeat-8.14.1-amd64.deb
 
 COPY extensions.sql /docker-entrypoint-initdb.d
 COPY metricbeat.yml /etc/metricbeat/
