@@ -8,7 +8,7 @@ Depending on future requirements, the AuditEvent can be stored locally or pushed
 
 ## Configuration
 
-By default, the AuditEvent is disabled, in order to enable it, the entry `hapi.fhir.audit_even` in the
+By default, the AuditEvent is disabled, in order to enable it, the entry `hapi.fhir.audit_event` in the
 `application.yaml` must be set to true, or the environment variable `AUDIT_EVENT` must be set to true.
 
 ## Example
@@ -140,5 +140,3 @@ By default, the AuditEvent is disabled, in order to enable it, the entry `hapi.f
   ]
 }
 ```
-
-## Configuration
