@@ -28,7 +28,7 @@ sast:
 
 build:
   stage: build
-  image: maven:3.8.1-jdk-11
+  image: maven:3.8.1-jdk-17
   script:
     - mvn install -DskipTests
   artifacts:
