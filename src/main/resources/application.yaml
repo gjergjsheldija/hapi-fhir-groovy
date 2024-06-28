@@ -71,7 +71,7 @@ hapi:
     ### This is the FHIR version. Choose between, DSTU2, DSTU3, R4 or R5
     fhir_version: R4
     ### Flag is false by default. This flag enables runtime installation of IG's.
-    ig_runtime_upload_enabled: false
+    ig_runtime_upload_enabled: true
     ### This flag when enabled to true, will avail evaluate measure operations from CR Module.
 
     ### enable to use the ApacheProxyAddressStrategy which uses X-Forwarded-* headers
@@ -90,6 +90,13 @@ hapi:
     #    server_address: http://hapi.fhir.org/baseR4
     #    defer_indexing_for_codesystems_of_size: 101
     #    install_transitive_ig_dependencies: true
+    #implementationguides:
+    # mona:
+    #   name: fhir.mona.icu.r4
+    #   reloadExisting: false
+    #   installMode: STORE_AND_INSTALL
+    #   version: 0.0.1
+    #   packageUrl: 'classpath:/ig/fhir.mona.icu.r4.tgz'
     #implementationguides:
     ###    example from registry (packages.fhir.org)
     #  swiss:
