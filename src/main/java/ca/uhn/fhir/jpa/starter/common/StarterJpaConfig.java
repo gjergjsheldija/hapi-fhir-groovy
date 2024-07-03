@@ -33,8 +33,8 @@ import ca.uhn.fhir.jpa.ips.provider.IpsOperationProvider;
 import ca.uhn.fhir.jpa.packages.IPackageInstallerSvc;
 import ca.uhn.fhir.jpa.packages.PackageInstallationSpec;
 import ca.uhn.fhir.jpa.partition.PartitionManagementProvider;
-import ca.uhn.fhir.jpa.provider.dstu3.JpaConformanceProviderDstu3;
 import ca.uhn.fhir.jpa.provider.*;
+import ca.uhn.fhir.jpa.provider.dstu3.JpaConformanceProviderDstu3;
 import ca.uhn.fhir.jpa.search.DatabaseBackedPagingProvider;
 import ca.uhn.fhir.jpa.search.IStaleSearchDeletingSvc;
 import ca.uhn.fhir.jpa.search.StaleSearchDeletingSvcImpl;
@@ -52,9 +52,9 @@ import ca.uhn.fhir.narrative.DefaultThymeleafNarrativeGenerator;
 import ca.uhn.fhir.narrative2.NullNarrativeGenerator;
 import ca.uhn.fhir.rest.api.IResourceSupportedSvc;
 import ca.uhn.fhir.rest.openapi.OpenApiInterceptor;
-import ca.uhn.fhir.rest.server.interceptor.partition.RequestTenantPartitionInterceptor;
 import ca.uhn.fhir.rest.server.*;
 import ca.uhn.fhir.rest.server.interceptor.*;
+import ca.uhn.fhir.rest.server.interceptor.partition.RequestTenantPartitionInterceptor;
 import ca.uhn.fhir.rest.server.provider.ResourceProviderFactory;
 import ca.uhn.fhir.rest.server.tenant.UrlBaseTenantIdentificationStrategy;
 import ca.uhn.fhir.rest.server.util.ISearchParamRegistry;
@@ -75,8 +75,8 @@ import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.web.cors.CorsConfiguration;
 
-import java.util.*;
 import javax.sql.DataSource;
+import java.util.*;
 
 import static ca.uhn.fhir.jpa.starter.common.validation.IRepositoryValidationInterceptorFactory.ENABLE_REPOSITORY_VALIDATING_INTERCEPTOR;
 
@@ -336,7 +336,8 @@ public class StarterJpaConfig {
 			fhirServer.registerInterceptor(new FhirPathFilterInterceptor());
 		}
 
-		fhirServer.registerInterceptor(loggingInterceptor);
+		// replaced with a custom interceptor
+		//fhirServer.registerInterceptor(loggingInterceptor);
 
 		implementationGuideOperationProvider.ifPresent(fhirServer::registerProvider);
 

@@ -1,4 +1,3 @@
-package com.clinomic.auditevent;
 /**
  * FHIR Server
  * <p>
@@ -10,6 +9,7 @@ package com.clinomic.auditevent;
  * @license All rights reserved.
  * @since 2024-06-10
  */
+package com.clinomic.auditevent;
 
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.storage.interceptor.balp.IBalpAuditContextServices;

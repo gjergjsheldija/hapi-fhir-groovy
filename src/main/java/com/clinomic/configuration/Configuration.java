@@ -1,5 +1,3 @@
-package com.clinomic.configuration;
-
 /**
  * FHIR Server
  * <p>
@@ -12,14 +10,14 @@ package com.clinomic.configuration;
  * @since 2024-06-06
  */
 
+package com.clinomic.configuration;
 
+import ca.uhn.fhir.model.api.annotation.Child;
+import ca.uhn.fhir.model.api.annotation.Description;
+import ca.uhn.fhir.model.api.annotation.ResourceDef;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.*;
-
-import ca.uhn.fhir.model.api.annotation.ResourceDef;
-import ca.uhn.fhir.model.api.annotation.Child;
-import ca.uhn.fhir.model.api.annotation.Description;
 import org.hl7.fhir.utilities.Utilities;
 
 import java.util.List;

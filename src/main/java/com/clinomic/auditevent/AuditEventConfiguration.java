@@ -1,4 +1,3 @@
-package com.clinomic.auditevent;
 /**
  * FHIR Server
  * <p>
@@ -10,6 +9,8 @@ package com.clinomic.auditevent;
  * @license All rights reserved.
  * @since 2024-06-10
  */
+
+package com.clinomic.auditevent;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -32,8 +33,9 @@ public class AuditEventConfiguration {
 	@Value("${hapi.fhir.audit_event}")
 	private Boolean auditEvent;
 
-	@Bean
+	@Bean(name = "auditEventStatus")
 	public Boolean auditEventStatus() {
 		return auditEvent;
 	}
+
 }

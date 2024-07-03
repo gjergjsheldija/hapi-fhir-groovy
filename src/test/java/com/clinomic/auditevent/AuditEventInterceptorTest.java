@@ -1,5 +1,3 @@
-package com.clinomic.auditevent;
-
 /**
  * FHIR Server
  * <p>
@@ -12,22 +10,24 @@ package com.clinomic.auditevent;
  * @since 2024-06-10
  */
 
+package com.clinomic.auditevent;
+
 import ca.uhn.fhir.rest.api.server.IPreResourceShowDetails;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import ca.uhn.fhir.storage.interceptor.balp.BalpAuditCaptureInterceptor;
 import ca.uhn.fhir.storage.interceptor.balp.IBalpAuditContextServices;
 import ca.uhn.fhir.storage.interceptor.balp.IBalpAuditEventSink;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.mockito.Mockito.*;
 
-@RunWith(MockitoJUnitRunner.class)
+
+@ExtendWith(MockitoExtension.class)
 public class AuditEventInterceptorTest {
 
 	@Mock
@@ -39,10 +39,9 @@ public class AuditEventInterceptorTest {
 	@Mock
 	private BalpAuditCaptureInterceptor mockBalpAuditCaptureInterceptor;
 
-	@InjectMocks
 	private AuditEventInterceptor auditEventInterceptor;
 
-	@Before
+	@BeforeEach
 	public void setUp() {
 		auditEventInterceptor = new AuditEventInterceptor(mockAuditEventSink, mockContextServices, true);
 		auditEventInterceptor.balpAuditCaptureInterceptor = mockBalpAuditCaptureInterceptor;

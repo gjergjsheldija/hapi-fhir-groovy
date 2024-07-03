@@ -1,4 +1,3 @@
-package com.clinomic.auditevent;
 /**
  * FHIR Server
  * <p>
@@ -10,6 +9,7 @@ package com.clinomic.auditevent;
  * @license All rights reserved.
  * @since 2024-06-10
  */
+package com.clinomic.auditevent;
 
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
@@ -24,6 +24,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 
@@ -32,7 +33,6 @@ import org.springframework.stereotype.Component;
 public class AuditEventInterceptor {
 
 	private static final Logger ourLog = LoggerFactory.getLogger(AuditEventInterceptor.class);
-
 
 	@Autowired
 	AuditEventSink theAuditEventSink;
@@ -44,7 +44,9 @@ public class AuditEventInterceptor {
 
 	BalpAuditCaptureInterceptor balpAuditCaptureInterceptor;
 
-	public AuditEventInterceptor(@NotNull IBalpAuditEventSink theAuditEventSink, @NotNull IBalpAuditContextServices theAuditEventContextServices, Boolean auditEventStatus) {
+	public AuditEventInterceptor(@NotNull IBalpAuditEventSink theAuditEventSink,
+										  @NotNull IBalpAuditContextServices theAuditEventContextServices,
+										  @Qualifier("auditEventStatus") Boolean auditEventStatus) {
 		this.auditEventStatus = auditEventStatus;
 		if (auditEventStatus == true) {
 			this.balpAuditCaptureInterceptor = new BalpAuditCaptureInterceptor(theAuditEventSink, theAuditEventContextServices);
@@ -60,23 +62,22 @@ public class AuditEventInterceptor {
 
 	@Hook(Pointcut.STORAGE_PRECOMMIT_RESOURCE_CREATED)
 	public void hookStoragePrecommitResourceCreated(IBaseResource theResource, ServletRequestDetails theRequestDetails) {
-		if (auditEventStatus == true) {
+		if (auditEventStatus == true)
 			this.balpAuditCaptureInterceptor.hookStoragePrecommitResourceCreated(theResource, theRequestDetails);
-		}
+
 	}
 
 	@Hook(Pointcut.STORAGE_PRECOMMIT_RESOURCE_DELETED)
 	public void hookStoragePrecommitResourceDeleted(IBaseResource theResource, ServletRequestDetails theRequestDetails) {
-		if (auditEventStatus == true) {
+		if (auditEventStatus == true)
 			this.balpAuditCaptureInterceptor.hookStoragePrecommitResourceDeleted(theResource, theRequestDetails);
-		}
+
 	}
 
 	@Hook(Pointcut.STORAGE_PRECOMMIT_RESOURCE_UPDATED)
 	public void hookStoragePrecommitResourceUpdated(IBaseResource theOldResource, IBaseResource theResource, ServletRequestDetails theRequestDetails) {
-		if (auditEventStatus == true) {
+		if (auditEventStatus == true)
 			this.balpAuditCaptureInterceptor.hookStoragePrecommitResourceUpdated(theOldResource, theResource, theRequestDetails);
-		}
-	}
 
+	}
 }

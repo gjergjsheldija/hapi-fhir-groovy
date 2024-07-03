@@ -1,5 +1,3 @@
-package com.clinomic.configuration;
-
 /**
  * FHIR Server
  * <p>
@@ -12,13 +10,18 @@ package com.clinomic.configuration;
  * @since 2024-06-06
  */
 
+package com.clinomic.configuration;
+
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import com.clinomic.util.BaseFhirR4ForTesting;
-import org.hl7.fhir.r4.model.*;
-import org.junit.jupiter.api.Test;
+import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.Enumerations;
+import org.hl7.fhir.r4.model.SearchParameter;
+import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 
