@@ -22,6 +22,8 @@
 
     <properties>
         <java.version>11</java.version>
+        <logcaptor.version>2.9.3</logcaptor.version>
+        <logstash-logback-encoder.version>7.0</logstash-logback-encoder.version>
     </properties>
 
     <prerequisites>
@@ -172,6 +174,11 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>${logstash-logback-encoder.version}</version>
         </dependency>
 
         <!-- Needed for JEE/Servlet support -->
@@ -375,6 +382,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.hakky54</groupId>
+            <artifactId>logcaptor</artifactId>
+            <version>${logcaptor.version}</version>
             <scope>test</scope>
         </dependency>
 

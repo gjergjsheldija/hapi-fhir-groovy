@@ -1,5 +1,3 @@
-package com.clinomic.configuration;
-
 /**
  * FHIR Server
  * <p>
@@ -11,6 +9,8 @@ package com.clinomic.configuration;
  * @license All rights reserved.
  * @since 2024-06-06
  */
+
+package com.clinomic.configuration;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;

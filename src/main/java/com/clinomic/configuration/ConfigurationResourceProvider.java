@@ -1,5 +1,3 @@
-package com.clinomic.configuration;
-
 /**
  * FHIR Server
  * <p>
@@ -12,11 +10,15 @@ package com.clinomic.configuration;
  * @since 2024-06-06
  */
 
+package com.clinomic.configuration;
 
 import ca.uhn.fhir.jpa.provider.BaseJpaResourceProvider;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.rest.annotation.*;
-import ca.uhn.fhir.rest.api.*;
+import ca.uhn.fhir.rest.api.SearchContainedModeEnum;
+import ca.uhn.fhir.rest.api.SearchTotalModeEnum;
+import ca.uhn.fhir.rest.api.SortSpec;
+import ca.uhn.fhir.rest.api.SummaryEnum;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import jakarta.annotation.PostConstruct;
