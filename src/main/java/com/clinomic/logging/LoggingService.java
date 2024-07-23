@@ -1,11 +1,11 @@
 /**
  * FHIR Server
  * <p>
- * Copyright (c) 2024, Clinomic GmbH, Leipzig
+ * Copyright (c) 2024, Clinomic GmbH, Aachen
  * All rights reserved.
  *
  * @author Gjergj Sheldija <gsheldija@clinomic.ai>
- * @copyright 2024, Clinomic GmbH, Leipzig
+ * @copyright 2024, Clinomic GmbH, Aachen
  * @license All rights reserved.
  * @since 2024-07-01
  */
