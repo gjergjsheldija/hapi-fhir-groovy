@@ -18,10 +18,10 @@
     </parent>
 
     <artifactId>hapi-fhir-jpaserver-starter</artifactId>
-    <packaging>war</packaging>
+    <packaging>jar</packaging>
 
     <properties>
-        <java.version>11</java.version>
+        <java.version>17</java.version>
         <logcaptor.version>2.9.3</logcaptor.version>
         <logstash-logback-encoder.version>7.0</logstash-logback-encoder.version>
     </properties>
@@ -441,9 +441,10 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
                 <configuration>
-                    <release>11</release>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <release>${java.version}</release>
                 </configuration>
             </plugin>
 

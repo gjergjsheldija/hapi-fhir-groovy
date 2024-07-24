@@ -22,9 +22,10 @@ import org.springframework.boot.web.servlet.ServletComponentScan;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Import;
+
+import com.clinomic.customoperation.ObservationCustomOperationProvider;
 
 @ServletComponentScan(basePackageClasses = {RestfulServer.class})
 @SpringBootApplication(exclude = {
@@ -56,6 +57,9 @@ public class Application extends SpringBootServletInitializer {
 	@Autowired
 	AutowireCapableBeanFactory beanFactory;
 
+	@Autowired
+	private ObservationCustomOperationProvider observationCustomOperationProvider;
+
 	@Bean
 	@Conditional(OnEitherVersion.class)
 	public ServletRegistrationBean hapiServletRegistration(RestfulServer restfulServer) {
@@ -64,6 +68,8 @@ public class Application extends SpringBootServletInitializer {
 		servletRegistrationBean.setServlet(restfulServer);
 		servletRegistrationBean.addUrlMappings("/fhir/*");
 		servletRegistrationBean.setLoadOnStartup(1);
+
+		restfulServer.registerProvider(observationCustomOperationProvider);
 
 		return servletRegistrationBean;
 	}
