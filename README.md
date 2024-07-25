@@ -72,7 +72,6 @@ stopdev                 Stop running containers (development image)
 restart                 Restart the app
 integration-tests       Run API tests
 unit-test               Run unit tests
-
 ```
 
 Setting the `advanced_lucene_indexing` to `true` will cause the server to not find a ValueSet by its url, neither when 
