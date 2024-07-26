@@ -63,7 +63,7 @@ public class ObservationCustomOperationProvider {
 		searchCriteria.add(Observation.SP_ENCOUNTER, encounter);
 		searchCriteria.add(Observation.SP_CODE, code);
 		searchCriteria.add(Observation.SP_DATE, new DateRangeParam(startDate, endDate));
-		searchCriteria.setLoadSynchronous(false);
+		searchCriteria.setLoadSynchronous(true);
 
 		IBundleProvider results = myObservationDao.search(searchCriteria);
 
