@@ -30,7 +30,11 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Component
@@ -82,7 +86,7 @@ public class ObservationCustomOperationProvider {
 
 	public List<Bundle.BundleEntryComponent> processResults(IBundleProvider results, Set<String> dateIntervals) {
 		int pageSize = 5000;
-		Map<String, Observation> latestObservationsByInterval = new HashMap<>();
+		Map<String, Observation> latestObservationsByInterval = new ConcurrentHashMap<>();
 
 		for (int fromIndex = 0; ; fromIndex += pageSize) {
 			List<IBaseResource> resourcesPage = results.getResources(fromIndex, fromIndex + pageSize);
@@ -96,7 +100,10 @@ public class ObservationCustomOperationProvider {
 //					System.out.println(effectiveDateTime + "||" + obs.getId());
 					if (dateIntervals.contains(effectiveDateTime)) {
 						latestObservationsByInterval.compute(effectiveDateTime, (k, existingObs) ->
-							existingObs == null || obs.getEffectiveDateTimeType().getValue().after(existingObs.getEffectiveDateTimeType().getValue()) ? obs : existingObs
+							existingObs == null
+								|| obs.getEffectiveDateTimeType().getValue().after(existingObs.getEffectiveDateTimeType().getValue())
+								? obs
+								: existingObs
 						);
 					}
 				});
