@@ -1,7 +1,7 @@
 /**
  * FHIR Server
  * <p>
- * Copyright (c) 2024, Clinomic GmbH, Aachen 
+ * Copyright (c) 2024, Clinomic GmbH, Aachen
  * All rights reserved.
  *
  * @author Andrey Zagariya <azagariya@clinomic.ai>
@@ -12,116 +12,117 @@
 
 package com.clinomic.customoperation;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.Observation;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
 import ca.uhn.fhir.jpa.api.dao.IFhirResourceDaoObservation;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
+import ca.uhn.fhir.model.api.annotation.Description;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
-import ca.uhn.fhir.rest.api.server.RequestDetails;
-import ca.uhn.fhir.rest.param.DateParam;
-import ca.uhn.fhir.rest.param.DateRangeParam;
-import ca.uhn.fhir.rest.param.NumberParam;
-import ca.uhn.fhir.rest.param.ParamPrefixEnum;
-import ca.uhn.fhir.rest.param.ReferenceParam;
-import ca.uhn.fhir.rest.param.TokenParam;
+import ca.uhn.fhir.rest.param.*;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.Observation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class ObservationCustomOperationProvider {
 
 	private static final Logger logger = LoggerFactory.getLogger(ObservationCustomOperationProvider.class);
+	private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
 
 	@Autowired
-	private IFhirResourceDaoObservation<Observation> observationDao;
-
-	private final ExecutorService executorService;
-
-	private static final int SECONDS = 60;
-
-	public ObservationCustomOperationProvider() {
-		int numberOfThreads = Runtime.getRuntime().availableProcessors();
-		this.executorService = Executors.newFixedThreadPool(numberOfThreads * 2);
-	}
+	private IFhirResourceDaoObservation<Observation> myObservationDao;
 
 	@Operation(name = "$group-by-interval", idempotent = true, type = Observation.class)
-	public Bundle groupByInterval(@OperationParam(name = "encounter") ReferenceParam encounter,
-			@OperationParam(name = "code") TokenParam code, @OperationParam(name = "startDate") DateParam startDate,
-			@OperationParam(name = "endDate") DateParam endDate,
-			@OperationParam(name = "interval") NumberParam interval, RequestDetails requestDetails) {
+	public Bundle groupByInterval(
+		@Description(shortDefinition = "The encounter to search for")
+		@OperationParam(name = "encounter") ReferenceParam encounter,
 
-		LocalDateTime startDateTime = startDate.getValue().toInstant().atOffset(ZoneOffset.UTC).toLocalDateTime();
-		LocalDateTime endDateTime = endDate.getValue().toInstant().atOffset(ZoneOffset.UTC).toLocalDateTime();
-		int intervalMinutes = interval.getValue().intValue();
+		@Description(shortDefinition = "The code of the Observation")
+		@OperationParam(name = "code") TokenParam code,
 
-		List<CompletableFuture<List<Observation>>> futures = new ArrayList<>();
+		@Description(shortDefinition = "The start date from when to search from")
+		@OperationParam(name = "startDate") DateParam startDate,
 
-		while (startDateTime.isBefore(endDateTime)) {
-			LocalDateTime intervalEndDateTime = startDateTime.plusMinutes(intervalMinutes);
-			String startDateTimeStr = startDateTime.toInstant(ZoneOffset.UTC).toString();
-			String intervalEndDateTimeStr = intervalEndDateTime.toInstant(ZoneOffset.UTC).toString();
+		@Description(shortDefinition = "The end date from when to search to")
+		@OperationParam(name = "endDate") DateParam endDate,
 
-			DateRangeParam dateRange = new DateRangeParam(
-					new DateParam(ParamPrefixEnum.GREATERTHAN_OR_EQUALS, startDateTimeStr),
-					new DateParam(ParamPrefixEnum.LESSTHAN, intervalEndDateTimeStr));
+		@Description(shortDefinition = "The interval in minutes")
+		@OperationParam(name = "interval") NumberParam interval) {
 
-			CompletableFuture<List<Observation>> future = CompletableFuture.supplyAsync(() -> {
-				SearchParameterMap params = new SearchParameterMap();
-				params.add(Observation.SP_ENCOUNTER, encounter);
-				params.add(Observation.SP_CODE, code);
-				params.add(Observation.SP_DATE, dateRange);
-				params.setCount(intervalMinutes * SECONDS);
+		SearchParameterMap searchCriteria = new SearchParameterMap();
+		searchCriteria.add(Observation.SP_ENCOUNTER, encounter);
+		searchCriteria.add(Observation.SP_CODE, code);
+		searchCriteria.add(Observation.SP_DATE, new DateRangeParam(startDate, endDate));
+		searchCriteria.setLoadSynchronous(false);
 
-				IBundleProvider bundleProvider;
-				try {
-					bundleProvider = observationDao.search(params, requestDetails);
-				} catch (Exception e) {
-					logger.error(
-							"Error occurred while searching for observations with parameters: encounter={}, code={}, dateRange={}. Error: {}",
-							encounter, code, dateRange, e.getMessage(), e);
-					return List.of();
-				}
+		IBundleProvider results = myObservationDao.search(searchCriteria);
 
-				List<IBaseResource> resources = bundleProvider.getResources(0, Integer.MAX_VALUE);
-				return resources.stream().filter(Observation.class::isInstance).map(Observation.class::cast)
-						.max((o1, o2) -> o1.getEffectiveDateTimeType().getValue()
-								.compareTo(o2.getEffectiveDateTimeType().getValue()))
-						.map(List::of).orElseGet(List::of);
-			}, executorService);
+		Set<String> dateIntervals = generateDateIntervals(startDate, endDate, interval);
 
-			futures.add(future);
+		Bundle filteredBundle = new Bundle();
+		filteredBundle.setType(Bundle.BundleType.SEARCHSET);
 
-			startDateTime = intervalEndDateTime;
+		List<Bundle.BundleEntryComponent> filteredEntries = processResults(results, dateIntervals);
+
+		filteredBundle.setEntry(filteredEntries);
+		filteredBundle.setTotal(filteredEntries.size());
+
+		return filteredBundle;
+	}
+
+	public List<Bundle.BundleEntryComponent> processResults(IBundleProvider results, Set<String> dateIntervals) {
+		int pageSize = 1000;
+		Map<String, Observation> latestObservationsByInterval = new HashMap<>();
+
+		for (int fromIndex = 0; ; fromIndex += pageSize) {
+			List<IBaseResource> resourcesPage = results.getResources(fromIndex, fromIndex + pageSize);
+			if (resourcesPage.isEmpty()) break;
+
+			resourcesPage.parallelStream()
+				.filter(resource -> resource instanceof Observation)
+				.map(resource -> (Observation) resource)
+				.forEach(obs -> {
+					String effectiveDateTime = obs.getEffectiveDateTimeType().getValueAsString().substring(0, 16);
+					if (dateIntervals.contains(effectiveDateTime)) {
+						latestObservationsByInterval.compute(effectiveDateTime, (k, existingObs) ->
+							existingObs == null || obs.getEffectiveDateTimeType().getValue().after(existingObs.getEffectiveDateTimeType().getValue()) ? obs : existingObs
+						);
+					}
+				});
 		}
 
-		List<Observation> allObservations = futures.stream().map(CompletableFuture::join).flatMap(List::stream)
-				.toList();
+		return latestObservationsByInterval.values().stream()
+			.map(obs -> {
+				Bundle.BundleEntryComponent entry = new Bundle.BundleEntryComponent();
+				entry.setResource(obs);
+				return entry;
+			})
+			.collect(Collectors.toList());
+	}
 
-		Bundle bundle = new Bundle();
-		bundle.setType(Bundle.BundleType.SEARCHSET);
-		allObservations.forEach(observation -> {
-			Observation ob = new Observation();
-			ob.setId(observation.getId());
-			ob.setEffective(observation.getEffective());
-			ob.setValue(observation.getValue());
-			bundle.addEntry().setResource(ob);
-		});
-		bundle.setTotal(bundle.getEntry().size());
+	public static Set<String> generateDateIntervals(DateParam dateStart, DateParam dateEnd, NumberParam intervalMinutes) {
+		LocalDateTime start = LocalDateTime.ofInstant(dateStart.getValue().toInstant(), ZoneId.systemDefault());
+		LocalDateTime end = LocalDateTime.ofInstant(dateEnd.getValue().toInstant(), ZoneId.systemDefault());
+		long intervalInMinutes = intervalMinutes.getValue().longValue();
 
-		return bundle;
+		Set<String> intervals = new HashSet<>();
+		LocalDateTime current = start;
+
+		while (!current.isAfter(end)) {
+			intervals.add(current.format(DATE_TIME_FORMATTER));
+			current = current.plusMinutes(intervalInMinutes);
+		}
+
+		return intervals;
 	}
 }
