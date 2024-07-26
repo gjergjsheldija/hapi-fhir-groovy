@@ -63,7 +63,7 @@ public class ObservationCustomOperationProvider {
 		searchCriteria.add(Observation.SP_ENCOUNTER, encounter);
 		searchCriteria.add(Observation.SP_CODE, code);
 		searchCriteria.add(Observation.SP_DATE, new DateRangeParam(startDate, endDate));
-		searchCriteria.setLoadSynchronous(true);
+		searchCriteria.setLoadSynchronous(false);
 
 		IBundleProvider results = myObservationDao.search(searchCriteria);
 
@@ -81,7 +81,7 @@ public class ObservationCustomOperationProvider {
 	}
 
 	public List<Bundle.BundleEntryComponent> processResults(IBundleProvider results, Set<String> dateIntervals) {
-		int pageSize = 1000;
+		int pageSize = 5000;
 		Map<String, Observation> latestObservationsByInterval = new HashMap<>();
 
 		for (int fromIndex = 0; ; fromIndex += pageSize) {
@@ -93,6 +93,7 @@ public class ObservationCustomOperationProvider {
 				.map(resource -> (Observation) resource)
 				.forEach(obs -> {
 					String effectiveDateTime = obs.getEffectiveDateTimeType().getValueAsString().substring(0, 16);
+//					System.out.println(effectiveDateTime + "||" + obs.getId());
 					if (dateIntervals.contains(effectiveDateTime)) {
 						latestObservationsByInterval.compute(effectiveDateTime, (k, existingObs) ->
 							existingObs == null || obs.getEffectiveDateTimeType().getValue().after(existingObs.getEffectiveDateTimeType().getValue()) ? obs : existingObs
@@ -122,7 +123,7 @@ public class ObservationCustomOperationProvider {
 			intervals.add(current.format(DATE_TIME_FORMATTER));
 			current = current.plusMinutes(intervalInMinutes);
 		}
-
+//		System.out.println(intervals);
 		return intervals;
 	}
 }
