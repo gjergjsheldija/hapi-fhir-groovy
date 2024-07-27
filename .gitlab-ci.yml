@@ -39,9 +39,9 @@ unit-test:
 
 build docker image:
     stage: build
-    image: docker:19.03.11
+    image: docker:26.1.1
     services:
-        - docker:19.03.11-dind
+        - docker:26.1.1-dind
     before_script:
         - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
     script:
