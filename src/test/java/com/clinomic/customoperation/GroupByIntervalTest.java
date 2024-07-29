@@ -17,6 +17,7 @@ import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.param.DateParam;
 import ca.uhn.fhir.rest.param.NumberParam;
+import com.clinomic.customoperation.observation.GroupByInterval;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.DateTimeType;
 import org.hl7.fhir.r4.model.Observation;
@@ -33,10 +34,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.when;
 
-class ObservationCustomOperationProviderTest {
+class GroupByIntervalTest {
 
 	@InjectMocks
-	private ObservationCustomOperationProvider provider;
+	private GroupByInterval provider;
 
 	@Mock
 	private IBundleProvider bundleProvider;
@@ -53,7 +54,7 @@ class ObservationCustomOperationProviderTest {
 	@Test
 	void testProcessResults() {
 		List<IBaseResource> observations = createMockObservations();
-		ObservationCustomOperationProvider customOperationProvider = new ObservationCustomOperationProvider();
+		GroupByInterval customOperationProvider = new GroupByInterval();
 
 		when(myObservationDao.search(any(SearchParameterMap.class))).thenReturn(bundleProvider);
 
@@ -115,7 +116,7 @@ class ObservationCustomOperationProviderTest {
 		// Use reflection to access the private method
 		java.lang.reflect.Method method;
 		try {
-			method = ObservationCustomOperationProvider.class.getDeclaredMethod("generateDateIntervals", DateParam.class, DateParam.class, NumberParam.class);
+			method = GroupByInterval.class.getDeclaredMethod("generateDateIntervals", DateParam.class, DateParam.class, NumberParam.class);
 			method.setAccessible(true);
 			@SuppressWarnings("unchecked")
 			Set<String> result = (Set<String>) method.invoke(provider, startDate, endDate, interval);

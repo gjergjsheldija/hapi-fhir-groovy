@@ -10,7 +10,7 @@
  * @since 2024-07-24
  */
 
-package com.clinomic.customoperation;
+package com.clinomic.customoperation.observation;
 
 import ca.uhn.fhir.jpa.api.dao.IFhirResourceDaoObservation;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
@@ -38,9 +38,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Component
-public class ObservationCustomOperationProvider {
+public class GroupByInterval {
 
-	private static final Logger logger = LoggerFactory.getLogger(ObservationCustomOperationProvider.class);
+	private static final Logger logger = LoggerFactory.getLogger(GroupByInterval.class);
 	private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
 
 	@Autowired
