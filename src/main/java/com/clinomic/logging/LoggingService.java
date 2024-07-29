@@ -1,11 +1,11 @@
 /**
  * FHIR Server
  * <p>
- * Copyright (c) 2024, Clinomic GmbH, Leipzig
+ * Copyright (c) 2024, Clinomic GmbH, Aachen
  * All rights reserved.
  *
  * @author Gjergj Sheldija <gsheldija@clinomic.ai>
- * @copyright 2024, Clinomic GmbH, Leipzig
+ * @copyright 2024, Clinomic GmbH, Aachen
  * @license All rights reserved.
  * @since 2024-07-01
  */
@@ -77,14 +77,23 @@ public class LoggingService {
 				contentType = contentType.trim();
 				EncodingEnum encodingEnum = EncodingEnum.forContentType(contentType);
 				if (encodingEnum != null) {
-					byte[] requestContents = myRequestDetails.loadRequestContents();
-					line.setRequestBodyFhir(new String(requestContents, Constants.CHARSET_UTF8));
+					byte[] requestContents = "".getBytes();
+					requestContents = myRequestDetails.getRequestContentsIfLoaded();
+					line.setRequestBodyFhir(createStringSafely(requestContents));
 				}
 			} else {
 				line.setRequestBodyFhir("");
 			}
 
 			return line;
+		}
+
+		private static String createStringSafely(byte[] byteArray) {
+			if (byteArray == null) {
+				return "";
+			} else {
+				return new String(byteArray, Constants.CHARSET_UTF8);
+			}
 		}
 
 		public static LoggedLine buildMessage(String type, String message, String resourceName, String operationName, String requestParameters) {
