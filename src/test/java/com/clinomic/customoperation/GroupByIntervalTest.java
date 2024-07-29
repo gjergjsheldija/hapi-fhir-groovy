@@ -95,14 +95,19 @@ class GroupByIntervalTest {
 	private List<IBaseResource> createMockObservations() {
 		List<IBaseResource> resources = new ArrayList<>();
 		Observation obs1 = new Observation();
-		obs1.setEffective(new DateTimeType(new Date(2024 - 1900, 0, 1, 11, 0)));
+		obs1.setEffective(new DateTimeType(new Date(2024 - 1900, 0, 1, 11, 0, 0)));
 		obs1.setId("Observation/1");
 		resources.add(obs1);
 
 		Observation obs2 = new Observation();
-		obs2.setEffective(new DateTimeType(new Date(2024 - 1900, 0, 1, 11, 15)));
+		obs2.setEffective(new DateTimeType(new Date(2024 - 1900, 0, 1, 11, 15, 1)));
 		obs2.setId("Observation/2");
 		resources.add(obs2);
+
+		Observation obs3 = new Observation();
+		obs3.setEffective(new DateTimeType(new Date(2024 - 1900, 0, 1, 11, 15, 2)));
+		obs3.setId("Observation/3");
+		resources.add(obs3);
 
 		return resources;
 	}
