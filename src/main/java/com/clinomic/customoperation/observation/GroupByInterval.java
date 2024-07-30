@@ -12,125 +12,196 @@
 
 package com.clinomic.customoperation.observation;
 
-import ca.uhn.fhir.jpa.api.dao.IFhirResourceDaoObservation;
-import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
-import ca.uhn.fhir.model.api.annotation.Description;
-import ca.uhn.fhir.rest.annotation.Operation;
-import ca.uhn.fhir.rest.annotation.OperationParam;
-import ca.uhn.fhir.rest.api.server.IBundleProvider;
-import ca.uhn.fhir.rest.param.*;
-import org.hl7.fhir.instance.model.api.IBaseResource;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.Observation;
+import org.hl7.fhir.r4.model.StringType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+import ca.uhn.fhir.jpa.api.dao.IFhirResourceDaoObservation;
+import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
+import ca.uhn.fhir.model.api.annotation.Description;
+import ca.uhn.fhir.rest.annotation.Operation;
+import ca.uhn.fhir.rest.annotation.OperationParam;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
+import ca.uhn.fhir.rest.param.DateParam;
+import ca.uhn.fhir.rest.param.NumberParam;
+import ca.uhn.fhir.rest.param.ReferenceParam;
+import ca.uhn.fhir.rest.param.TokenOrListParam;
+import ca.uhn.fhir.rest.param.TokenParam;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
+import jakarta.persistence.TemporalType;
 
 @Component
 public class GroupByInterval {
 
 	private static final Logger logger = LoggerFactory.getLogger(GroupByInterval.class);
-	private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+
+	private static final String _ID = "_id";
+
+	private static final String URL_INTERVAL_STARTING_POINT = "https://fhir.mona.icu/StructureDefinition/intervalStartingPoint";
+
+	@Autowired
+	private EntityManager entityManager;
 
 	@Autowired
 	private IFhirResourceDaoObservation<Observation> myObservationDao;
 
-	@Operation(name = "$group-by-interval", idempotent = true, type = Observation.class)
-	public Bundle groupByInterval(
-		@Description(shortDefinition = "The encounter to search for")
-		@OperationParam(name = "encounter") ReferenceParam encounter,
+    @Operation(name = "$group-by-interval", idempotent = true, type = Observation.class)
+    public Bundle groupByInterval(
+            @Description(shortDefinition = "The encounter to search for", 
+            example = "Encounter/3b205f2f-3813-4bff-9945-1729d52b9eb0") 
+            @OperationParam(name = "encounter") ReferenceParam encounter,
+            @Description(shortDefinition = "The system and the code of the observation", 
+            example = "http://loinc.org|8867-4") 
+            @OperationParam(name = "code") TokenParam code,
+            @Description(shortDefinition = "The start datetime to search from", 
+            example = "'2024-07-24T01:00:00Z'") 
+            @OperationParam(name = "startDateTime") DateParam startDateTime,
+            @Description(shortDefinition = "The end datetime to search to", 
+            example = "'2024-07-24T03:00:00Z'") 
+            @OperationParam(name = "endDateTime") DateParam endDateTime,
+            @Description(shortDefinition = "The interval to group by in seconds") 
+            @OperationParam(name = "interval") NumberParam interval,
+            RequestDetails theRequest) {
 
-		@Description(shortDefinition = "The code of the Observation")
-		@OperationParam(name = "code") TokenParam code,
+		ZonedDateTime startZonedDateTime = parseZonedDateTime(startDateTime.getValueAsString());
+		ZonedDateTime endZonedDateTime = parseZonedDateTime(endDateTime.getValueAsString());
 
-		@Description(shortDefinition = "The start date from when to search from")
-		@OperationParam(name = "startDate") DateParam startDate,
+		ZoneId clientZoneId = startZonedDateTime.getZone();
 
-		@Description(shortDefinition = "The end date from when to search to")
-		@OperationParam(name = "endDate") DateParam endDate,
+		Instant startInstant = startZonedDateTime.toInstant();
+		Instant endInstant = endZonedDateTime.toInstant();
 
-		@Description(shortDefinition = "The interval in minutes")
-		@OperationParam(name = "interval") NumberParam interval) {
+		List<Object[]> queryResults = executeAggregationQuery(interval.getValue().longValue(), encounter.getIdPart(),
+				Date.from(startInstant), Date.from(endInstant), code.getSystem(), code.getValue());
+		logger.debug("totalAggregationQueryResults={}", queryResults.size());
 
-		SearchParameterMap searchCriteria = new SearchParameterMap();
-		searchCriteria.add(Observation.SP_ENCOUNTER, encounter);
-		searchCriteria.add(Observation.SP_CODE, code);
-		searchCriteria.add(Observation.SP_DATE, new DateRangeParam(startDate, endDate));
-		searchCriteria.setLoadSynchronous(false);
+		TokenOrListParam uuidParams = new TokenOrListParam();
 
-		IBundleProvider results = myObservationDao.search(searchCriteria);
+		Map<String, String> observationIntervalMap = new HashMap<>();
 
-		Set<String> dateIntervals = generateDateIntervals(startDate, endDate, interval);
-
-		Bundle filteredBundle = new Bundle();
-		filteredBundle.setType(Bundle.BundleType.SEARCHSET);
-
-		List<Bundle.BundleEntryComponent> filteredEntries = processResults(results, dateIntervals);
-
-		filteredBundle.setEntry(filteredEntries);
-		filteredBundle.setTotal(filteredEntries.size());
-
-		return filteredBundle;
-	}
-
-	public List<Bundle.BundleEntryComponent> processResults(IBundleProvider results, Set<String> dateIntervals) {
-		int pageSize = 5000;
-		Map<String, Observation> latestObservationsByInterval = new ConcurrentHashMap<>();
-
-		for (int fromIndex = 0; ; fromIndex += pageSize) {
-			List<IBaseResource> resourcesPage = results.getResources(fromIndex, fromIndex + pageSize);
-			if (resourcesPage.isEmpty()) break;
-
-			resourcesPage.parallelStream()
-				.filter(resource -> resource instanceof Observation)
-				.map(resource -> (Observation) resource)
-				.forEach(obs -> {
-					String effectiveDateTime = obs.getEffectiveDateTimeType().getValueAsString().substring(0, 16);
-//					System.out.println(effectiveDateTime + "||" + obs.getId());
-					if (dateIntervals.contains(effectiveDateTime)) {
-						latestObservationsByInterval.compute(effectiveDateTime, (k, existingObs) ->
-							existingObs == null
-								|| obs.getEffectiveDateTimeType().getValue().after(existingObs.getEffectiveDateTimeType().getValue())
-								? obs
-								: existingObs
-						);
-					}
-				});
+		for (Object[] result : queryResults) {
+			String observationUuid = result[1].toString();
+			Instant intervalInstant = ((Date) result[0]).toInstant();
+			String intervalGroup = intervalInstant.toString();
+			observationIntervalMap.put(observationUuid, intervalGroup);
+			uuidParams.addOr(new TokenParam(observationUuid));
+			logger.debug("observationUuid={}, intervalGroup={}", observationUuid, intervalGroup);
 		}
 
-		return latestObservationsByInterval.values().stream()
-			.map(obs -> {
-				Bundle.BundleEntryComponent entry = new Bundle.BundleEntryComponent();
-				entry.setResource(obs);
-				return entry;
-			})
-			.collect(Collectors.toList());
+		Bundle bundle = new Bundle();
+		bundle.setType(Bundle.BundleType.SEARCHSET);
+
+		if (!uuidParams.getValuesAsQueryTokens().isEmpty()) {
+			SearchParameterMap searchCriteria = new SearchParameterMap();
+			searchCriteria.add(_ID, uuidParams);
+			searchCriteria.setCount(uuidParams.getValuesAsQueryTokens().size());
+
+			List<Observation> allObservations = myObservationDao.searchForResources(searchCriteria, theRequest);
+
+			allObservations.forEach(obs -> {
+				String intervalGroup = observationIntervalMap.get(obs.getIdElement().getIdPart());
+				Instant intervalInstant = Instant.parse(intervalGroup);
+				ZonedDateTime clientTime = intervalInstant.atZone(clientZoneId);
+				String clientFormattedTime = clientTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+				obs.getMeta()
+						.addExtension(new Extension(URL_INTERVAL_STARTING_POINT, new StringType(clientFormattedTime)));
+				bundle.addEntry().setResource(obs);
+			});
+		}
+
+		bundle.setTotal(bundle.getEntry().size());
+
+		return bundle;
 	}
 
-	public static Set<String> generateDateIntervals(DateParam dateStart, DateParam dateEnd, NumberParam intervalMinutes) {
-		LocalDateTime start = LocalDateTime.ofInstant(dateStart.getValue().toInstant(), ZoneId.systemDefault());
-		LocalDateTime end = LocalDateTime.ofInstant(dateEnd.getValue().toInstant(), ZoneId.systemDefault());
-		long intervalInMinutes = intervalMinutes.getValue().longValue();
+	ZonedDateTime parseZonedDateTime(String dateTimeStr) {
+		DateTimeFormatter formatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
 
-		Set<String> intervals = new HashSet<>();
-		LocalDateTime current = start;
-
-		while (!current.isAfter(end)) {
-			intervals.add(current.format(DATE_TIME_FORMATTER));
-			current = current.plusMinutes(intervalInMinutes);
+		try {
+			return ZonedDateTime.parse(dateTimeStr, formatter);
+		} catch (Exception e) {
+			return ZonedDateTime.parse(dateTimeStr, DateTimeFormatter.ISO_LOCAL_DATE_TIME.withZone(ZoneId.of("UTC")));
 		}
-//		System.out.println(intervals);
-		return intervals;
+	}
+
+	/**
+	 * Aggregates by the datetime interval in seconds
+	 * 
+	 * @return Object[] of interval_group, observation_uuid
+	 */
+	@SuppressWarnings("unchecked")
+	private List<Object[]> executeAggregationQuery(long interval, String encounterId, Date startDateTime, Date endDateTime, String system, String code) {
+        String sql = "WITH interval_param AS (" +
+                     "    SELECT :interval AS interval" +
+                     "), encounter_res_id AS (" +
+                     "    SELECT res_id FROM public.hfj_resource WHERE res_type = 'Encounter' AND fhir_id = :encounterId " +
+                     "), calculated_dates AS (" +
+                     "    SELECT" +
+                     "        sd.sp_value_high AS date," +
+                     "        hr.fhir_id AS observation_uuid," +
+                     "        FLOOR(EXTRACT(EPOCH FROM date_trunc('second', sd.sp_value_high) - date_trunc('day', sd.sp_value_high)) / interval_param.interval) * interval_param.interval AS plain_date_interval" +
+                     "    FROM" +
+                     "        public.hfj_spidx_date sd" +
+                     "    JOIN" +
+                     "        public.hfj_res_link rl ON sd.res_id = rl.src_resource_id" +
+                     "    JOIN" +
+                     "        public.hfj_resource hr ON sd.res_id = hr.res_id" +
+                     "    JOIN" +
+                     "        public.hfj_spidx_token st ON sd.res_id = st.res_id" +
+                     "    JOIN" +
+                     "        interval_param ON TRUE" +
+                     "    WHERE" +
+                     "        rl.target_resource_id = (SELECT res_id FROM encounter_res_id)" +
+                     "        AND rl.src_path = 'Observation.encounter'" +
+                     "        AND sd.sp_value_high >= :startDateTime" +
+                     "        AND sd.sp_value_low <= :endDateTime" +
+                     "        AND st.sp_name = 'code'" +
+                     "        AND st.sp_system = :system" +
+                     "        AND st.sp_value = :code" +
+                     "), grouped_dates AS (" +
+                     "    SELECT" +
+                     "        plain_date_interval," +
+                     "        MAX(date) AS max_date," +
+                     "        observation_uuid," +
+                     "        ROW_NUMBER() OVER (PARTITION BY plain_date_interval ORDER BY MAX(date) DESC) AS rn" +
+                     "    FROM" +
+                     "        calculated_dates" +
+                     "    GROUP BY" +
+                     "        plain_date_interval, observation_uuid" +
+                     ") " +
+                     "SELECT" +
+                     "    date_trunc('day', max_date) + plain_date_interval * INTERVAL '1 second' AS interval_group," +
+                     "    observation_uuid " +
+                     "FROM" +
+                     "    grouped_dates " +
+                     "WHERE" +
+                     "    rn = 1 " +
+                     "ORDER BY" +
+                     "    interval_group";
+
+		Query query = entityManager.createNativeQuery(sql);
+		query.setParameter("interval", interval);
+		query.setParameter("encounterId", encounterId);
+		query.setParameter("startDateTime", startDateTime, TemporalType.TIMESTAMP);
+		query.setParameter("endDateTime", endDateTime, TemporalType.TIMESTAMP);
+		query.setParameter("system", system);
+		query.setParameter("code", code);
+
+		return query.getResultList();
 	}
 }

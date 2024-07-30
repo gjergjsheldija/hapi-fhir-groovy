@@ -151,8 +151,8 @@ hapi:
     enforce_referential_integrity_on_write: false
     #    etag_support_enabled: true
     expunge_enabled: true
-    client_id_strategy: ALPHANUMERIC
-    #    server_id_strategy: SEQUENTIAL_NUMERIC
+    client_id_strategy: ANY
+    server_id_strategy: UUID
     fhirpath_interceptor_enabled: false
     filter_search_enabled: true
     graphql_enabled: false
@@ -218,7 +218,7 @@ hapi:
     #      log_exceptions: true
     #      name: fhirtest.access
     max_binary_size: 104857600
-    max_page_size: 200
+    max_page_size: 10000
     retain_cached_searches_mins: 0
     reuse_cached_search_results_millis: 0
     tester:
