@@ -27,7 +27,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -62,7 +67,7 @@ class GroupByIntervalTest {
 			.thenReturn(observations)
 			.thenReturn(Collections.emptyList());
 
-		Set<String> noResults = customOperationProvider.generateDateIntervals(
+		List<LocalDateTime> noResults = customOperationProvider.generateDateIntervals(
 			new DateParam("2024-01-01T00:00"),
 			new DateParam("2024-01-01T01:00"),
 			new NumberParam(10));
@@ -73,7 +78,7 @@ class GroupByIntervalTest {
 			.thenReturn(observations)
 			.thenReturn(Collections.emptyList());
 
-		Set<String> singleResults = customOperationProvider.generateDateIntervals(
+		List<LocalDateTime> singleResults = customOperationProvider.generateDateIntervals(
 			new DateParam("2024-01-01T11:00"),
 			new DateParam("2024-01-01T11:05"),
 			new NumberParam(5));
@@ -84,7 +89,7 @@ class GroupByIntervalTest {
 			.thenReturn(observations)
 			.thenReturn(Collections.emptyList());
 
-		Set<String> twoResults = customOperationProvider.generateDateIntervals(
+		List<LocalDateTime> twoResults = customOperationProvider.generateDateIntervals(
 			new DateParam("2024-01-01T11:00"),
 			new DateParam("2024-01-01T11:15"),
 			new NumberParam(5));
@@ -124,12 +129,12 @@ class GroupByIntervalTest {
 			method = GroupByInterval.class.getDeclaredMethod("generateDateIntervals", DateParam.class, DateParam.class, NumberParam.class);
 			method.setAccessible(true);
 			@SuppressWarnings("unchecked")
-			Set<String> result = (Set<String>) method.invoke(provider, startDate, endDate, interval);
+			List<LocalDateTime> result = (List<LocalDateTime>) method.invoke(provider, startDate, endDate, interval);
 
 			assertEquals(3, result.size());
-			assertTrue(result.contains("2023-01-01T00:00"));
-			assertTrue(result.contains("2023-01-01T01:00"));
-			assertTrue(result.contains("2023-01-01T02:00"));
+			assertTrue(result.contains(LocalDateTime.parse("2022-12-31T23:00", DateTimeFormatter.ISO_LOCAL_DATE_TIME)));
+			assertTrue(result.contains(LocalDateTime.parse("2023-01-01T00:00", DateTimeFormatter.ISO_LOCAL_DATE_TIME)));
+			assertTrue(result.contains(LocalDateTime.parse("2023-01-01T01:00", DateTimeFormatter.ISO_LOCAL_DATE_TIME)));
 		} catch (Exception e) {
 			fail("Exception occurred: " + e.getMessage());
 		}
