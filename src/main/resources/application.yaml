@@ -194,6 +194,7 @@ hapi:
       - com.clinomic.logging.CustomLoggingInterceptor
       - ca.uhn.fhir.jpa.subscription.util.SubscriptionDebugLogInterceptor
       - com.clinomic.auditevent.AuditEventInterceptor
+      - com.clinomic.security.SecurityInterceptor
 
     # comma-separated list of fully qualified provider classes.
     # classes listed here will be fetched from the Spring context when combined with 'custom-bean-packages',
@@ -253,17 +254,23 @@ hapi:
     lastn_enabled: false
     store_resource_in_lucene_index_enabled: true
 
-###  This is configuration for normalized quantity search level default is 0
-###   0: NORMALIZED_QUANTITY_SEARCH_NOT_SUPPORTED - default
-###   1: NORMALIZED_QUANTITY_STORAGE_SUPPORTED
-###   2: NORMALIZED_QUANTITY_SEARCH_SUPPORTED
-#    normalized_quantity_search_level: 2
+    ###  This is configuration for normalized quantity search level default is 0
+    ###   0: NORMALIZED_QUANTITY_SEARCH_NOT_SUPPORTED - default
+    ###   1: NORMALIZED_QUANTITY_STORAGE_SUPPORTED
+    ###   2: NORMALIZED_QUANTITY_SEARCH_SUPPORTED
+    #    normalized_quantity_search_level: 2
 
     ##############
     ## Clinomic ##
     ##############
     audit_event: ${AUDIT_EVENT:false}
     log_request_body: ${LOG_REQUEST_BODY:false}
+
+    security:
+      enabled: ${SECURITY_ENABLED:false}
+      server: ${SECURITY_SERVER:http://localhost:8181/realms/clinomic}
+      jwks: ${SECURITY_JWKS:http://localhost:8181/realms/clinomic/protocol/openid-connect/certs}
+
 
 #elasticsearch:
 #  debug:

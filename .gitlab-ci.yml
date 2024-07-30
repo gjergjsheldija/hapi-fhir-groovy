@@ -2,6 +2,7 @@ variables:
   DOCKER_TLS_CERTDIR: ""
   APPLICATION_NAME: "fhir-server"
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  FHIR_SERVER_IMAGE_NAME: "$CI_REGISTRY_IMAGE/clinomic-fhir-server"
 
 stages:
   - security
@@ -35,3 +36,16 @@ unit-test:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+build docker image:
+    stage: build
+    image: docker:26.1.1
+    services:
+        - docker:26.1.1-dind
+    before_script:
+        - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    script:
+        - echo "Building and pushing FHIR server docker tagged image...."
+        - docker build . -t "$FHIR_SERVER_IMAGE_NAME:$CI_COMMIT_TAG" --target default -f ./Dockerfile && docker push "$FHIR_SERVER_IMAGE_NAME:$CI_COMMIT_TAG"
+    rules:
+        - if: '$CI_COMMIT_TAG'
