@@ -7,7 +7,6 @@ The custom configuration is enabled by default via the use of Resource Provider.
 It behaves as a standard FHIR resource, that means it also has a `_history` entry attached to it.
 The url to access it is `/fhir/Configuration`.
 The configuration looks like :
-
 ```json
 {
     "resourceType": "Configuration",
