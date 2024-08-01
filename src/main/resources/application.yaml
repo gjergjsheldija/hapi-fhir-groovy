@@ -1,4 +1,8 @@
 #Uncomment the "servlet" and "context-path" lines below to make the fhir endpoint available at /example/path/fhir instead of the default value of /fhir
+decorator:
+  datasource:
+    p6spy:
+      enable-logging: false
 server:
   #  servlet:
   #    context-path: /example/path
@@ -197,6 +201,7 @@ hapi:
     # or will be instantiated via reflection using an no-arg constructor; then registered with the server
     custom-provider-classes:
       - com.clinomic.configuration.ConfigurationResourceProvider
+      - com.clinomic.customoperation.observation.GroupByInterval
 
     # Threadpool size for BATCH'ed GETs in a bundle.
     #    bundle_batch_pool_size: 10
@@ -214,7 +219,7 @@ hapi:
     #      log_exceptions: true
     #      name: fhirtest.access
     max_binary_size: 104857600
-    max_page_size: 200
+    max_page_size: 10000
     retain_cached_searches_mins: 0
     reuse_cached_search_results_millis: 0
     tester:
