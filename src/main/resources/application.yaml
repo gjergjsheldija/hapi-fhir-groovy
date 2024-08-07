@@ -12,10 +12,18 @@ server:
 #Adds the option to go to eg. http://localhost:8080/actuator/health for seeing the running configuration
 #see https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html#actuator.endpoints
 management:
+  server: 
+    port: 9100
   endpoints:
     web:
       exposure:
-        include: "health,prometheus"
+        include: "health, metrics, prometheus"
+  metrics:
+    enabled: true
+  health:
+    enabled: true
+  prometheus:
+    enabled: true
 spring:
   main:
     allow-circular-references: true
