@@ -15,7 +15,7 @@ The configuration looks like :
     "body": "the content of the configuration",
     "status" : "active",
     "description" : "some long description",
-    "type": "configuration"
+  "type": "script"
 }
 ```
 

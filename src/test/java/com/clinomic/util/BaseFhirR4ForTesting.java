@@ -28,7 +28,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 	classes = {Application.class},
 	properties = {
 		"hapi.fhir.custom-interceptor-classes=com.clinomic.logging.CustomLoggingInterceptor",
-		"hapi.fhir.custom-bean-packages=com.clinomic.configuration,com.clinomic.logging",
+		"hapi.fhir.custom-bean-packages=com.clinomic.configuration,com.clinomic.logging,com.clinomic.scripting",
 		"spring.datasource.url=jdbc:h2:mem:dbr4",
 		"hapi.fhir.enable_repository_validating_interceptor=false",
 		"hapi.fhir.fhir_version=r4",
