@@ -1,4 +1,4 @@
-<configuration scan="true" scanPeriod="30 seconds">
+<configuration scan="true" scanPeriod="10 seconds" debug="true">
 
     <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
@@ -19,6 +19,12 @@
                     <fieldName>message</fieldName>
                 </message>
                 <stackTrace>
+                    <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                        <maxDepthPerThrowable>2</maxDepthPerThrowable>
+                        <maxLength>2048</maxLength>
+                        <shortenedClassNameLength>20</shortenedClassNameLength>
+                        <rootCauseFirst>true</rootCauseFirst>
+                    </throwableConverter>
                     <fieldName>stacktrace</fieldName>
                 </stackTrace>
                 <context>
@@ -53,38 +59,33 @@
 
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-            <level>INFO</level>
+            <level>ALL</level>
         </filter>
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%file:%line] %msg%n</pattern>
+            <!--<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%36thread] %-5level %50.50logger{50} [%30.30file{30}:%4.4line] %msg %replace([MDC: %mdc]){'\[MDC: \]', ''} %nopex %n</pattern>--> <!-- No stack trace. -->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%-10thread] %-5level [%-50.50logger{50}] [%-30.30file{30}:%4.4line] %msg %replace([MDC: %mdc]){'\[MDC: \]', ''} %ex{2} %n</pattern> <!-- Shortened stack trace. -->
         </encoder>
     </appender>
 
-
-    <springProfile name="dev">
-        <logger name="org.springframework.beans" level="INFO">
-            <appender-ref ref="STDOUT"/>
-        </logger>
-        <logger name="org.springframework.core" level="INFO">
-            <appender-ref ref="STDOUT"/>
-        </logger>
-        <root level="info">
-            <appender-ref ref="STDOUT"/>
-        </root>
-    </springProfile>
-
-    <springProfile name="!dev">
-        <logger name="org.springframework.beans" level="INFO">
-            <appender-ref ref="JSON"/>
-        </logger>
-        <logger name="org.springframework.core" level="INFO">
-            <appender-ref ref="JSON"/>
-        </logger>
-        <root level="info">
+  <if condition='property("LOG_APPENDER_TYPE").contains("JSON")'>
+    <then>
+        <logger level="INFO" 	name="org.springframework.beans"/>
+        <logger level="INFO" 	name="org.springframework.core"/>
+        <logger level="DEBUG" 	name="com.clinomic"/>
+        <root level="INFO">
             <appender-ref ref="JSON"/>
         </root>
-    </springProfile>
-
+    </then>
+    <else>
+        <logger level="INFO" 	name="org.springframework.beans"/>
+        <logger level="INFO" 	name="org.springframework.core"/>
+        <logger level="TRACE" 	name="com.clinomic.customoperation.observation.GroupByInterval"/>
+        <logger level="DEBUG" 	name="com.clinomic"/>
+        <root level="INFO">
+            <appender-ref ref="STDOUT"/>
+        </root>
+    </else>
+  </if>
 
 </configuration>
 

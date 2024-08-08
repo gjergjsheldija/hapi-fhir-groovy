@@ -11,6 +11,7 @@ services:
     volumes:
       - /tmp:/tmp
       - ./lucenefiles:/app/target/lucenefiles/
+      - ./src/main/resources/logback.xml:/logbackconfig/logback.xml    # See also catalina.properties/logging.config. Now, when running on local docker, changes to logback.xml will be reloaded automatically.
     depends_on:
       - clinomic-fhir-postgres
 
