@@ -38,6 +38,7 @@ services:
     command:
       - "/tests/integration/custom-configuration.feature"
       - "/tests/integration/auditevent.feature"
+      - "/tests/integration/scripting.feature"
       - "/tests/utils.feature"
     depends_on:
       - clinomic-fhir-postgres
