@@ -1,0 +1,32 @@
+## Grafana Prometheus datasource setup
+apiVersion: 1
+
+deleteDatasources:
+  - name: Prometheus
+    orgId: 1
+
+datasources:
+- name: Prometheus
+  type: prometheus
+  access: proxy
+  orgId: 1
+  uid: 8PYL2Jo7k
+  url: http://prometheus:9090
+  password:
+  user:
+  database:
+  basicAuth: true
+  basicAuthUser: admin
+  basicAuthPassword: foobar
+  withCredentials:
+  isDefault:
+  jsonData:
+     graphiteVersion: "1.1"
+     tlsAuth: false
+     tlsAuthWithCACert: false
+  secureJsonData:
+    tlsCACert: "..."
+    tlsClientCert: "..."
+    tlsClientKey: "..."
+  version: 1
+  editable: true
