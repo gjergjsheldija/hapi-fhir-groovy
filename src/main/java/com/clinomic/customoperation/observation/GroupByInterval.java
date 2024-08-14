@@ -78,7 +78,7 @@ public class GroupByInterval {
             @OperationParam(name = "interval") NumberParam interval,
             RequestDetails theRequest) {
 
-		logger.info("Call received by custom op {} : {}", theRequest.getOperation(), theRequest.getCompleteUrl());
+		logger.debug("Call received by custom op {} : {}", theRequest.getOperation(), theRequest.getCompleteUrl());
 
 		Bundle bundle = new Bundle();
 		bundle.setType(Bundle.BundleType.SEARCHSET);
