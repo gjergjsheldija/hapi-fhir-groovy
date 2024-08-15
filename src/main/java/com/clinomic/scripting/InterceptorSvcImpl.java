@@ -13,7 +13,7 @@
 package com.clinomic.scripting;
 
 import ca.uhn.fhir.interceptor.api.IInterceptorService;
-import com.clinomic.configuration.ConfigurationResourceProvider;
+import com.clinomic.scripting.loader.GroovyClassLoader;
 import groovy.lang.GroovyObject;
 import jakarta.annotation.PostConstruct;
 import org.jetbrains.annotations.NotNull;
@@ -23,18 +23,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.stereotype.Service;
 
+import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class ScriptingSvcImpl implements IScriptingSvc {
+public class InterceptorSvcImpl implements IScriptingSvc {
 
-	private static final Logger ourLog = LoggerFactory.getLogger(ConfigurationResourceProvider.class);
+	private static final Logger ourLog = LoggerFactory.getLogger(InterceptorSvcImpl.class);
 	private static final String CUSTOM_SCRIPT = "CustomScript";
+	static final String INTERCEPTOR = "Interceptor";
 
 	@Autowired
 	IInterceptorService interceptorService;
+
 	@Autowired
 	AutowireCapableBeanFactory beanFactory;
 	GroovyClassLoader groovyClassLoader;
@@ -45,43 +48,46 @@ public class ScriptingSvcImpl implements IScriptingSvc {
 		groovyClassLoader.setBeanFactory(beanFactory);
 	}
 
-	public void loadInterceptor(String interceptorName, String interceptorBody) {
+	public void loadCustomScript(String interceptorName, String interceptorBody) {
 
-		unloadInterceptor(interceptorName);
+		unloadCustomScript(interceptorName);
 
 		GroovyObject groovyObject = groovyClassLoader.loadScriptObject(interceptorName, interceptorBody);
 		interceptorService.registerInterceptor(groovyObject);
 
-		ourLog.info("loaded interceptor with name : {}", interceptorName);
+		ourLog.info("Loaded Interceptor with name : {}", interceptorName);
 
 	}
 
-	public void unloadInterceptor(String interceptorName) {
-		List<Object> customInterceptors = listCustomInterceptors();
+	public void unloadCustomScript(String interceptorName) {
+		List<Object> customInterceptors = listCustomScripts();
+
+		if (customInterceptors.isEmpty()) {
+			ourLog.info("No provider found with name : {}", interceptorName);
+			return;
+		}
 
 		customInterceptors.stream()
 			.filter(interceptor -> interceptor.getClass().toString().contains(interceptorName))
 			.forEach(interceptor -> {
 				interceptorService.unregisterInterceptor(interceptor);
-				ourLog.info("unloaded interceptor with name : {}", interceptorName);
+				ourLog.info("Unloaded Interceptor with name : {}", interceptorName);
 			});
 	}
 
-	public void unloadInterceptors() {
-		List<Object> customInterceptors = listCustomInterceptors();
-
-		customInterceptors.stream().forEach(interceptor -> interceptorService.unregisterInterceptor(interceptor));
-
-	}
-
 	@NotNull
-	public List<Object> listCustomInterceptors() {
+	public List<Object> listCustomScripts() {
 		List<Object> interceptors = interceptorService.getAllRegisteredInterceptors();
 
-		List<Object> customInterceptors = interceptors.stream().filter(interceptor -> Arrays.stream(interceptor.getClass().getAnnotations()).anyMatch(annotation -> annotation.toString().contains(CUSTOM_SCRIPT))).collect(Collectors.toList());
-
-		return customInterceptors;
+		return interceptors.stream()
+			.filter(interceptor -> {
+				List<Annotation> annotations = Arrays.asList(interceptor.getClass().getAnnotations());
+				long matchingAnnotations = annotations.stream()
+					.filter(annotation -> annotation.toString().contains(CUSTOM_SCRIPT) || annotation.toString().contains(INTERCEPTOR))
+					.count();
+				return matchingAnnotations >= 2;
+			})
+			.collect(Collectors.toList());
 	}
-
 
 }

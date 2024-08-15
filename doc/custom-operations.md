@@ -124,4 +124,4 @@ components:
 ```
 
 Notes :
-Extra stadard FHIR query parameters can also be added like `_elements` and `_sort`
+Extra standard FHIR query parameters can also be added like `_elements` and `_sort`

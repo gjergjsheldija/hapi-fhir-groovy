@@ -31,10 +31,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
-public class ScriptingSvcImplTest extends BaseFhirR4ForTesting {
+public class InterceptorSvcImplTest extends BaseFhirR4ForTesting {
 
 	@Autowired
-	ScriptingSvcImpl scriptingSvcImpl;
+	InterceptorSvcImpl interceptorSvcImpl;
 
 	@Autowired
 	IInterceptorService interceptorService;
@@ -82,7 +82,7 @@ public class ScriptingSvcImplTest extends BaseFhirR4ForTesting {
 	@Test
 	void testLoadUnloadScriptingInterceptors() {
 		loadSourceCode();
-		scriptingSvcImpl.loadInterceptor("test_script", "package scripting\n" +
+		interceptorSvcImpl.loadCustomScript("PatientCreated", "package scripting\n" +
 			"\n" +
 			"import ca.uhn.fhir.interceptor.api.Hook\n" +
 			"import ca.uhn.fhir.interceptor.api.Interceptor\n" +
@@ -101,7 +101,7 @@ public class ScriptingSvcImplTest extends BaseFhirR4ForTesting {
 		List<Object> loadedInterceptors = interceptorService.getAllRegisteredInterceptors();
 		assert (loadedInterceptors.size() == 2);
 
-		scriptingSvcImpl.unloadInterceptors();
+		interceptorSvcImpl.unloadCustomScript("PatientCreated");
 		loadedInterceptors = interceptorService.getAllRegisteredInterceptors();
 		assert (loadedInterceptors.size() == 1);
 	}

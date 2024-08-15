@@ -60,7 +60,7 @@ public class CustomLoggingInterceptorTest extends BaseFhirR4ForTesting {
 		assertFalse(readPat.getId().isEmpty());
 
 		List<String> logs = logCaptor.getInfoLogs();
-		String expected = "{\"operationType\":\"read\",\"operationName\":\"\",\"idOrResourceName\":\"Patient/1\",\"requestParameters\":null,\"requestBodyFhir\":\"\"}";
+		String expected = "{\"operationType\":\"read\",\"operationName\":\"\",\"idOrResourceName\":\"Patient/" + patId + "\",\"requestParameters\":null,\"requestBodyFhir\":\"\"}";
 		JSONAssert.assertEquals(expected, logs.get(1), JSONCompareMode.STRICT);
 
 	}
