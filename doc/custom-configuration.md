@@ -40,7 +40,7 @@ In order to use it the following SearchParameters must be in place :
   "url": "https://fhir.mona.icu/SearchParameter/Configuration-name",
   "name": "Configuration-name",
   "status": "active",
-  "code": "configuration-name",
+  "code": "name",
   "base": [
     "Configuration"
   ],
@@ -57,7 +57,7 @@ In order to use it the following SearchParameters must be in place :
   "url": "https://fhir.mona.icu/SearchParameter/Configuration-type",
   "name": "Configuration-type",
   "status": "active",
-  "code": "configuration-type",
+  "code": "type",
   "base": [
     "Configuration"
   ],
@@ -74,7 +74,7 @@ In order to use it the following SearchParameters must be in place :
   "url": "https://fhir.mona.icu/SearchParameter/Configuration-status",
   "name": "Configuration-status",
   "status": "active",
-  "code": "configuration-status",
+  "code": "status",
   "base": [
     "Configuration"
   ],

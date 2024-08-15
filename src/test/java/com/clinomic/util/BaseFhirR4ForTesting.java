@@ -36,6 +36,8 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 		"hapi.fhir.cr_enabled=false",
 		"hapi.fhir.subscription.websocket_enabled=false",
 		"hapi.fhir.log_request_body=true",
+		"hapi.fhir.delete-expunge-enabled=true",
+		"hapi.fhir.allow_multiple_delete=true",
 		"spring.main.allow-bean-definition-overriding=true"})
 public class BaseFhirR4ForTesting {
 

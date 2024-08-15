@@ -10,15 +10,12 @@
  * @since 2024-08-07
  */
 
-package com.clinomic.scripting;
+package com.clinomic.scripting.api;
 
-import java.util.List;
+import java.lang.annotation.*;
 
-public interface IScriptingSvc {
-	void loadCustomScript(String interceptorName, String interceptorBody);
-
-	void unloadCustomScript(String interceptorName);
-
-	List<Object> listCustomScripts();
-
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+@Inherited
+public @interface Provider {
 }

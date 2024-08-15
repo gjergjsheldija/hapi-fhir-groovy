@@ -203,13 +203,13 @@ hapi:
       - ca.uhn.fhir.jpa.subscription.util.SubscriptionDebugLogInterceptor
       - com.clinomic.auditevent.AuditEventInterceptor
       - com.clinomic.security.SecurityInterceptor
-      - com.clinomic.scripting.ScriptingInterceptor
 
     # comma-separated list of fully qualified provider classes.
     # classes listed here will be fetched from the Spring context when combined with 'custom-bean-packages',
     # or will be instantiated via reflection using an no-arg constructor; then registered with the server
     custom-provider-classes:
       - com.clinomic.configuration.ConfigurationResourceProvider
+      - com.clinomic.scripting.ScriptingProvider
       - com.clinomic.customoperation.observation.GroupByInterval
 
     # Threadpool size for BATCH'ed GETs in a bundle.

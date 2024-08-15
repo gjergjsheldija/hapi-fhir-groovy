@@ -15,6 +15,8 @@ package com.clinomic.configuration;
 import ca.uhn.fhir.model.api.annotation.Child;
 import ca.uhn.fhir.model.api.annotation.Description;
 import ca.uhn.fhir.model.api.annotation.ResourceDef;
+import ca.uhn.fhir.model.api.annotation.SearchParamDefinition;
+import ca.uhn.fhir.rest.gclient.StringClientParam;
 import org.hl7.fhir.exceptions.FHIRException;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.*;
@@ -241,6 +243,33 @@ public class Configuration extends DomainResource implements IBaseResource {
 	@Child(name = "type", type = {CodeType.class}, order = 6, min = 1, max = 1, modifier = false, summary = true)
 	@Description(shortDefinition = "The type of the configuration (script or configuration)")
 	protected Enumeration<Configuration.ConfigurationType> type;
+
+	@SearchParamDefinition(
+		name = "name",
+		path = "Configuration.name",
+		description = "",
+		type = "string"
+	)
+	public static final String SP_NAME = "name";
+	public static final StringClientParam NAME = new StringClientParam(SP_NAME);
+
+	@SearchParamDefinition(
+		name = "type",
+		path = "Configuration.type",
+		description = "",
+		type = "token"
+	)
+	public static final String SP_TYPE = "type";
+	public static final StringClientParam TYPE = new StringClientParam(SP_TYPE);
+
+	@SearchParamDefinition(
+		name = "status",
+		path = "Configuration.status",
+		description = "",
+		type = "token"
+	)
+	public static final String SP_STATUS = "status";
+	public static final StringClientParam STATUS = new StringClientParam(SP_STATUS);
 
 	@Override
 	public Configuration copy() {
