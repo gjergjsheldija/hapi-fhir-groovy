@@ -10,7 +10,7 @@
  * @since 2024-08-07
  */
 
-package com.clinomic.scripting;
+package com.clinomic.scripting.loader;
 
 import groovy.lang.GroovyCodeSource;
 import groovy.lang.GroovyObject;
@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @ToString
 public class GroovyClassLoader extends groovy.lang.GroovyClassLoader {
-	private static final Map<String, Object> CACHEMAP_MAP = new ConcurrentHashMap<>();
+	private static final Map<String, Object> CACHE_MAP = new ConcurrentHashMap<>();
 
 	AutowireCapableBeanFactory beanFactory;
 
@@ -58,7 +58,7 @@ public class GroovyClassLoader extends groovy.lang.GroovyClassLoader {
 		codeSource.setCachable(shouldCacheSource);
 
 		if (shouldCacheSource) {
-			CACHEMAP_MAP.put(key, codeSource.getName());
+			CACHE_MAP.put(key, codeSource.getName());
 		}
 
 		return super.parseClass(codeSource);
@@ -67,6 +67,7 @@ public class GroovyClassLoader extends groovy.lang.GroovyClassLoader {
 	public void clearCache() {
 		synchronized (this) {
 			sourceCache.clear();
+			CACHE_MAP.clear();
 		}
 	}
 
@@ -74,16 +75,16 @@ public class GroovyClassLoader extends groovy.lang.GroovyClassLoader {
 	 * @param key
 	 */
 	public void clearCache(String key) {
-		Object value = CACHEMAP_MAP.get(key);
+		Object value = CACHE_MAP.get(key);
 		synchronized (this) {
 			if (sourceCache.containsKey(value)) sourceCache.remove(value);
-			if (CACHEMAP_MAP.containsKey(key)) CACHEMAP_MAP.remove(key);
+			if (CACHE_MAP.containsKey(key)) CACHE_MAP.remove(key);
 		}
 	}
 
 	@SneakyThrows
 	@NotNull
-	GroovyObject loadScriptObject(String name, String script) {
+	public GroovyObject loadScriptObject(String name, String script) {
 		Class<?> result = parseClass(name, script, true);
 		GroovyObject groovyObject = (GroovyObject) result.getDeclaredConstructor().newInstance();
 

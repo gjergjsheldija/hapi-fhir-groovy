@@ -3,7 +3,7 @@ Feature: Test the custom Configuration resource
   Background:
     * call read('this:../utils.feature@name=utils')
 
-  @create_configuration
+  @name=create_configuration
   Scenario: Create custom Configuration resource
     Given url `${urlBase}/SearchParameter`
     And header Content-Type = 'application/fhir+json'
@@ -14,9 +14,9 @@ Feature: Test the custom Configuration resource
           "resourceType": "SearchParameter",
           "id": "Configuration-name",
           "url": "https://fhir.mona.icu/SearchParameter/Configuration-name",
-          "name": "Configuration-name",
+          "name": "name",
           "status": "active",
-          "code": "configuration-name",
+          "code": "name",
           "base": [
             "Configuration"
           ],
@@ -36,9 +36,9 @@ Feature: Test the custom Configuration resource
           "resourceType": "SearchParameter",
           "id": "Configuration-type",
           "url": "https://fhir.mona.icu/SearchParameter/Configuration-type",
-          "name": "Configuration-type",
+          "name": "type",
           "status": "active",
-          "code": "configuration-type",
+          "code": "type",
           "base": [
             "Configuration"
           ],
@@ -58,9 +58,9 @@ Feature: Test the custom Configuration resource
           "resourceType": "SearchParameter",
           "id": "Configuration-status",
           "url": "https://fhir.mona.icu/SearchParameter/Configuration-status",
-          "name": "Configuration-status",
+          "name": "status",
           "status": "active",
-          "code": "configuration-status",
+          "code": "status",
           "base": [
             "Configuration"
           ],
@@ -129,45 +129,45 @@ Feature: Test the custom Configuration resource
   Scenario: Create search parameters and validate them for the custom Configuration resource
     * call read('this:../utils.feature@name=expunge')
     * call sleep 5
-    * call read('@create_configuration')
+    * call read('@name=create_configuration')
       # search for resources : partial name
-    Given url `${urlBase}/Configuration?configuration-name:contains=stra`
+    Given url `${urlBase}/Configuration?name:contains=stra`
     When method get
     Then status 200
     And match response.entry[0].resource.name == "strange"
 
     # search for resources : exact name
-    Given url `${urlBase}/Configuration?configuration-name:exact=strange`
+    Given url `${urlBase}/Configuration?name:exact=strange`
     When method get
     Then status 200
     And match response.entry[0].resource.name == "strange"
 
     # search for resources : wrong name
-    Given url `${urlBase}/Configuration?configuration-name:exact=aaa`
+    Given url `${urlBase}/Configuration?name:exact=aaa`
     When method get
     Then status 200
     And match response.total == 0
 
     # search for resources : type configuration
-    Given url `${urlBase}/Configuration?configuration-type=configuration`
+    Given url `${urlBase}/Configuration?type=configuration`
     When method get
     Then status 200
     And match response.entry[0].resource.name == "strange"
 
     # search for resources : type configuration missing
-    Given url `${urlBase}/Configuration?configuration-type=script`
+    Given url `${urlBase}/Configuration?type=script`
     When method get
     Then status 200
     And match response.total == 0
 
     # search for resources : status active
-    Given url `${urlBase}/Configuration?configuration-status=active`
+    Given url `${urlBase}/Configuration?status=active`
     When method get
     Then status 200
     And match response.entry[0].resource.name == "strange"
 
     # search for resources : status wrong
-    Given url `${urlBase}/Configuration?configuration-status=weong`
+    Given url `${urlBase}/Configuration?status=weong`
     When method get
     Then status 200
     And match response.total == 0
