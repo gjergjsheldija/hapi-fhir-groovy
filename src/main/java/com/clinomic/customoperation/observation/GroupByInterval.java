@@ -78,53 +78,64 @@ public class GroupByInterval {
             @OperationParam(name = "interval") NumberParam interval,
             RequestDetails theRequest) {
 
-		ZonedDateTime startZonedDateTime = parseZonedDateTime(startDateTime.getValueAsString());
-		ZonedDateTime endZonedDateTime = parseZonedDateTime(endDateTime.getValueAsString());
-
-		ZoneId clientZoneId = startZonedDateTime.getZone();
-
-		Instant startInstant = startZonedDateTime.toInstant();
-		Instant endInstant = endZonedDateTime.toInstant();
-
-		List<Object[]> queryResults = executeAggregationQuery(interval.getValue().longValue(), encounter.getIdPart(),
-				Date.from(startInstant), Date.from(endInstant), code.getSystem(), code.getValue());
-		logger.debug("totalAggregationQueryResults={}", queryResults.size());
-
-		TokenOrListParam uuidParams = new TokenOrListParam();
-
-		Map<String, String> observationIntervalMap = new HashMap<>();
-
-		for (Object[] result : queryResults) {
-			String observationUuid = result[1].toString();
-			Instant intervalInstant = ((Date) result[0]).toInstant();
-			String intervalGroup = intervalInstant.toString();
-			observationIntervalMap.put(observationUuid, intervalGroup);
-			uuidParams.addOr(new TokenParam(observationUuid));
-			logger.debug("observationUuid={}, intervalGroup={}", observationUuid, intervalGroup);
-		}
+		logger.debug("Call received by custom op {} : {}", theRequest.getOperation(), theRequest.getCompleteUrl());
 
 		Bundle bundle = new Bundle();
 		bundle.setType(Bundle.BundleType.SEARCHSET);
 
-		if (!uuidParams.getValuesAsQueryTokens().isEmpty()) {
-			SearchParameterMap searchCriteria = new SearchParameterMap();
-			searchCriteria.add(_ID, uuidParams);
-			searchCriteria.setCount(uuidParams.getValuesAsQueryTokens().size());
+		try {
 
-			List<Observation> allObservations = myObservationDao.searchForResources(searchCriteria, theRequest);
+			ZonedDateTime startZonedDateTime = parseZonedDateTime(startDateTime.getValueAsString());
+			ZonedDateTime endZonedDateTime = parseZonedDateTime(endDateTime.getValueAsString());
 
-			allObservations.forEach(obs -> {
-				String intervalGroup = observationIntervalMap.get(obs.getIdElement().getIdPart());
-				Instant intervalInstant = Instant.parse(intervalGroup);
-				ZonedDateTime clientTime = intervalInstant.atZone(clientZoneId);
-				String clientFormattedTime = clientTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-				obs.getMeta()
-						.addExtension(new Extension(URL_INTERVAL_STARTING_POINT, new StringType(clientFormattedTime)));
-				bundle.addEntry().setResource(obs);
-			});
+			ZoneId clientZoneId = startZonedDateTime.getZone();
+
+			Instant startInstant = startZonedDateTime.toInstant();
+			Instant endInstant = endZonedDateTime.toInstant();
+
+			List<Object[]> queryResults = executeAggregationQuery(interval.getValue().longValue(), encounter.getIdPart(),
+					Date.from(startInstant), Date.from(endInstant), code.getSystem(), code.getValue());
+			logger.debug("totalAggregationQueryResults={}", queryResults.size());
+
+			TokenOrListParam uuidParams = new TokenOrListParam();
+
+			Map<String, String> observationIntervalMap = new HashMap<>();
+
+			for (Object[] result : queryResults) {
+				String observationUuid = result[1].toString();
+				Instant intervalInstant = ((Date) result[0]).toInstant();
+				String intervalGroup = intervalInstant.toString();
+				observationIntervalMap.put(observationUuid, intervalGroup);
+				uuidParams.addOr(new TokenParam(observationUuid));
+				logger.debug("observationUuid={}, intervalGroup={}", observationUuid, intervalGroup);
+			}
+
+
+			if (!uuidParams.getValuesAsQueryTokens().isEmpty()) {
+				SearchParameterMap searchCriteria = new SearchParameterMap();
+				searchCriteria.add(_ID, uuidParams);
+				searchCriteria.setCount(uuidParams.getValuesAsQueryTokens().size());
+
+				List<Observation> allObservations = myObservationDao.searchForResources(searchCriteria, theRequest);
+
+				allObservations.forEach(obs -> {
+					String intervalGroup = observationIntervalMap.get(obs.getIdElement().getIdPart());
+					Instant intervalInstant = Instant.parse(intervalGroup);
+					ZonedDateTime clientTime = intervalInstant.atZone(clientZoneId);
+					String clientFormattedTime = clientTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+					obs.getMeta()
+							.addExtension(new Extension(URL_INTERVAL_STARTING_POINT, new StringType(clientFormattedTime)));
+					bundle.addEntry().setResource(obs);
+				});
+			}
+
+			bundle.setTotal(bundle.getEntry().size());
+
+		} catch (Exception e) {
+
+			logger.error("Exception in custom op {} : {}, rethrowing ...", theRequest.getOperation(), e.getMessage());
+			throw(e);
 		}
-
-		bundle.setTotal(bundle.getEntry().size());
 
 		return bundle;
 	}

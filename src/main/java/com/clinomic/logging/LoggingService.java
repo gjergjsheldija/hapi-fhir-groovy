@@ -52,6 +52,7 @@ public class LoggingService {
 					case EXTENDED_OPERATION_SERVER:
 					case EXTENDED_OPERATION_TYPE:
 						line.setOperationName(myRequestDetails.getOperation());
+						break;
 					default:
 						line.setOperationName("");
 				}
@@ -64,6 +65,10 @@ public class LoggingService {
 			} else {
 				line.setIdOrResourceName(myRequestDetails.getResourceName() != null ? myRequestDetails.getResourceName() : "");
 			}
+
+			String reqpath = myRequestDetails.getCompleteUrl();
+         int start = reqpath.indexOf("?");
+         if (start >= 0) line.setRequestParameters(reqpath.substring(start));
 
 			String contentType;
 

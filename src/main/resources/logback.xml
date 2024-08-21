@@ -1,4 +1,4 @@
-<configuration scan="true" scanPeriod="30 seconds">
+<configuration scan="true" scanPeriod="10 seconds" debug="true">
 
     <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
@@ -19,72 +19,79 @@
                     <fieldName>message</fieldName>
                 </message>
                 <stackTrace>
+                    <throwableConverter class="net.logstash.logback.stacktrace.ShortenedThrowableConverter">
+                        <maxDepthPerThrowable>2</maxDepthPerThrowable>
+                        <maxLength>2048</maxLength>
+                        <shortenedClassNameLength>20</shortenedClassNameLength>
+                        <rootCauseFirst>true</rootCauseFirst>
+                    </throwableConverter>
                     <fieldName>stacktrace</fieldName>
                 </stackTrace>
                 <context>
                     <fieldName>context</fieldName>
                 </context>
-                <!-- Add MDC fields if any -->
+                <!--
+                    Add MDC fields to the log message.
+                    NOTE :  This will exclude any MDC fields not specifically mentioned here.
+                    More info : https://github.com/logfellow/logstash-logback-encoder
+                -->
                 <mdc>
-                    <mdcKey fieldName="uri">uri</mdcKey>
-                    <mdcKey fieldName="method">method</mdcKey>
-                    <mdcKey fieldName="remote_ip">remote_ip</mdcKey>
-                    <mdcKey fieldName="request_id">request_id</mdcKey>
-                    <mdcKey fieldName="host">host</mdcKey>
-                    <mdcKey fieldName="user_agent">user_agent</mdcKey>
-                    <mdcKey fieldName="status">status</mdcKey>
-                    <mdcKey fieldName="bytes_in">bytes_in</mdcKey>
-                    <mdcKey fieldName="bytes_out">bytes_out</mdcKey>
-                    <mdcKey fieldName="latency">latency</mdcKey>
-                    <mdcKey fieldName="latency_human">latency_human</mdcKey>
-                    <mdcKey fieldName="client_id">client_id</mdcKey>
-                    <mdcKey fieldName="tenant_id">tenant_id</mdcKey>
-                    <mdcKey fieldName="compartment">compartment</mdcKey>
-                    <mdcKey fieldName="message_source">message_source</mdcKey>
-                    <mdcKey fieldName="operation_type">operation_type</mdcKey>
-                    <mdcKey fieldName="operation_name">operation_name</mdcKey>
-                    <mdcKey fieldName="id_resource_name">id_resource_name</mdcKey>
-                    <mdcKey fieldName="request_parameters">request_parameters</mdcKey>
-                    <mdcKey fieldName="request_body">request_body</mdcKey>
+                    <fieldName>MDC</fieldName>
+                    <includeMdcKeyName>host</includeMdcKeyName>
+                    <includeMdcKeyName>uri</includeMdcKeyName>
+                    <includeMdcKeyName>method</includeMdcKeyName>
+                    <includeMdcKeyName>remote_ip</includeMdcKeyName>
+                    <includeMdcKeyName>request_id</includeMdcKeyName>
+                    <includeMdcKeyName>host</includeMdcKeyName>
+                    <includeMdcKeyName>user_agent</includeMdcKeyName>
+                    <includeMdcKeyName>status</includeMdcKeyName>
+                    <includeMdcKeyName>bytes_in</includeMdcKeyName>
+                    <includeMdcKeyName>bytes_out</includeMdcKeyName>
+                    <includeMdcKeyName>latency</includeMdcKeyName>
+                    <includeMdcKeyName>latency_human</includeMdcKeyName>
+                    <includeMdcKeyName>client_id</includeMdcKeyName>
+                    <includeMdcKeyName>tenant_id</includeMdcKeyName>
+                    <includeMdcKeyName>compartment</includeMdcKeyName>
+                    <includeMdcKeyName>message_source</includeMdcKeyName>
+                    <includeMdcKeyName>operation_type</includeMdcKeyName>
+                    <includeMdcKeyName>operation_name</includeMdcKeyName>
+                    <includeMdcKeyName>id_resource_name</includeMdcKeyName>
+                    <includeMdcKeyName>request_parameters</includeMdcKeyName>
+                    <includeMdcKeyName>request_body</includeMdcKeyName>
                 </mdc>
             </providers>
         </encoder>
     </appender>
 
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-            <level>INFO</level>
+            <level>ALL</level>
         </filter>
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%file:%line] %msg%n</pattern>
+            <!--<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%36thread] %-5level %50.50logger{50} [%30.30file{30}:%4.4line] %msg %replace([MDC: %mdc]){'\[MDC: \]', ''} %nopex %n</pattern>--> <!-- No stack trace. -->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%-10thread] %-5level [%-50.50logger{50}] [%-30.30file{30}:%4.4line] %msg %replace([MDC: %mdc]){'\[MDC: \]', ''} %ex{2} %n</pattern> <!-- Shortened stack trace. -->
         </encoder>
     </appender>
 
-
-    <springProfile name="dev">
-        <logger name="org.springframework.beans" level="INFO">
-            <appender-ref ref="STDOUT"/>
-        </logger>
-        <logger name="org.springframework.core" level="INFO">
-            <appender-ref ref="STDOUT"/>
-        </logger>
-        <root level="info">
-            <appender-ref ref="STDOUT"/>
-        </root>
-    </springProfile>
-
-    <springProfile name="!dev">
-        <logger name="org.springframework.beans" level="INFO">
-            <appender-ref ref="JSON"/>
-        </logger>
-        <logger name="org.springframework.core" level="INFO">
-            <appender-ref ref="JSON"/>
-        </logger>
-        <root level="info">
-            <appender-ref ref="JSON"/>
-        </root>
-    </springProfile>
-
+    <if condition='property("SPRING_PROFILES_ACTIVE").equals("dev") || property("LOG_APPENDER_TYPE").equals("CONSOLE")'>
+        <then>
+            <logger level="INFO" 	name="org.springframework.beans"/>
+            <logger level="INFO" 	name="org.springframework.core"/>
+            <logger level="TRACE" 	name="com.clinomic.customoperation.observation.GroupByInterval"/>
+            <logger level="DEBUG" 	name="com.clinomic"/>
+            <root level="INFO">
+                <appender-ref ref="CONSOLE"/>
+            </root>
+        </then>
+        <else>
+            <logger level="INFO" 	name="org.springframework.beans"/>
+            <logger level="INFO" 	name="org.springframework.core"/>
+            <logger level="DEBUG" 	name="com.clinomic"/>
+            <root level="INFO">
+                <appender-ref ref="JSON"/>
+            </root>
+        </else>
+    </if>
 
 </configuration>
 
