@@ -40,13 +40,14 @@ public class CustomLoggingInterceptorTest extends BaseFhirR4ForTesting {
 
 	@BeforeEach
 	void setUp() {
-		logCaptor = LogCaptor.forName("com.clinomic.logging.LoggingService");
 
 		ourCtx = FhirContext.forR4();
 		ourCtx.getRestfulClientFactory().setServerValidationMode(ServerValidationModeEnum.NEVER);
 		ourCtx.getRestfulClientFactory().setSocketTimeout(1200 * 1000);
 		String ourServerBase = "http://localhost:" + port + "/fhir/";
 		ourClient = ourCtx.newRestfulGenericClient(ourServerBase);
+		logCaptor = LogCaptor.forName("com.clinomic.logging.LoggingService");
+		// logCaptor.clearLogs();
 	}
 
 	@Test
@@ -58,9 +59,13 @@ public class CustomLoggingInterceptorTest extends BaseFhirR4ForTesting {
 		Patient readPat = ourClient.read().resource(Patient.class).withId(patId).execute();
 
 		assertFalse(readPat.getId().isEmpty());
+		
+		String expected = "{\"operationType\":\"read\",\"operationName\":\"\",\"idOrResourceName\":\"Patient/" + patId + "\",\"requestParameters\":null,\"requestBodyFhir\":\"\"}";
+
+		try {Thread.sleep(5000); } catch (Exception e) {} // Give the logs a chance to flush.
 
 		List<String> logs = logCaptor.getInfoLogs();
-		String expected = "{\"operationType\":\"read\",\"operationName\":\"\",\"idOrResourceName\":\"Patient/" + patId + "\",\"requestParameters\":null,\"requestBodyFhir\":\"\"}";
+
 		JSONAssert.assertEquals(expected, logs.get(1), JSONCompareMode.STRICT);
 
 	}

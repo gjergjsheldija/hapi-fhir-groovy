@@ -20,33 +20,56 @@ import ca.uhn.fhir.rest.api.SearchTotalModeEnum;
 import ca.uhn.fhir.rest.api.SortSpec;
 import ca.uhn.fhir.rest.api.SummaryEnum;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
+import ca.uhn.fhir.rest.server.IResourceProvider;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
 
-@Component
 public class ConfigurationResourceProvider extends BaseJpaResourceProvider<Configuration> {
 
 	private static final Logger ourLog = LoggerFactory.getLogger(ConfigurationResourceProvider.class);
 
-	@Autowired
-	ConfigurationBean configurationBean;
+	ConfigurationResourceProvider()
+	{
+		ourLog.info("ConfigurationResourceProvider ctor.");
+	}
 
 	@Autowired
 	RestfulServer fhirServer;
 
+	void debugProviders(String msg)
+	{
+		int i = 1;
+      for (IResourceProvider p : fhirServer.getResourceProviders())
+      {
+      	ourLog.trace("{} {} - {}", msg, i++, p.getResourceType());
+			if  (p instanceof com.clinomic.configuration.ConfigurationResourceProvider)
+			{
+				ourLog.debug("ConfigurationResourceProvider :");
+				ourLog.debug("		fhirServer 			: {}", 	((ConfigurationResourceProvider) p).fhirServer);
+				ourLog.debug("		Dao					: {}", 	((ConfigurationResourceProvider) p).getDao());
+				ourLog.debug("		myStorageSettings	: {}", 	((ConfigurationResourceProvider) p).myStorageSettings);
+				ourLog.debug("		getContext 			: {}", 	((ConfigurationResourceProvider) p).getContext());
+			}
+      }
+	}
+
 	@PostConstruct
 	public void init() {
-		fhirServer.unregisterProvider(getResourceType());
-		fhirServer.registerProvider(configurationBean.resourceProviderConfiguration());
 
-		ourLog.info("Clinomic Configuration Resource Provider Registered");
+		ourLog.debug("ConfigurationResourceProvider PostConstruct :");
+
+		fhirServer.unregisterProvider(this);
+
+		fhirServer.registerProvider(this);
+
+		if (ourLog.isDebugEnabled()) debugProviders("Registered Providers :");
+
 	}
 
 

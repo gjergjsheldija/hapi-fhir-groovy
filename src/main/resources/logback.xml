@@ -69,7 +69,7 @@
         </filter>
         <encoder>
             <!--<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%36thread] %-5level %50.50logger{50} [%30.30file{30}:%4.4line] %msg %replace([MDC: %mdc]){'\[MDC: \]', ''} %nopex %n</pattern>--> <!-- No stack trace. -->
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%-10thread] %-5level [%-50.50logger{50}] [%-30.30file{30}:%4.4line] %msg %replace([MDC: %mdc]){'\[MDC: \]', ''} %ex{2} %n</pattern> <!-- Shortened stack trace. -->
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%-10.10thread] %-5level [%-50.50logger{50}] [%-30.30file{30}:%4.4line] %msg %replace([MDC: %mdc]){'\[MDC: \]', ''} %ex{2} %n</pattern> <!-- Shortened stack trace. -->
         </encoder>
     </appender>
 
@@ -79,6 +79,8 @@
             <logger level="INFO" 	name="org.springframework.core"/>
             <logger level="TRACE" 	name="com.clinomic.customoperation.observation.GroupByInterval"/>
             <logger level="DEBUG" 	name="com.clinomic"/>
+            <logger level="TRACE" 	name="com.clinomic.configuration.ConfigurationResourceProvider"/>
+            <logger level="TRACE" 	name="scripting"/>
             <root level="INFO">
                 <appender-ref ref="CONSOLE"/>
             </root>
