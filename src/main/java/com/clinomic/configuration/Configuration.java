@@ -27,7 +27,6 @@ import java.util.List;
 @ResourceDef(name = "Configuration", profile = "http://fhir.mona.icu/StructureDefinition/Configuration", id = "Configuration")
 public class Configuration extends DomainResource implements IBaseResource {
 
-
 	public enum ConfigurationStatus {
 		/**
 		 * This account is active and may be used.
@@ -247,7 +246,7 @@ public class Configuration extends DomainResource implements IBaseResource {
 	@SearchParamDefinition(
 		name = "name",
 		path = "Configuration.name",
-		description = "",
+		description = "Search for a Configuration by name",
 		type = "string"
 	)
 	public static final String SP_NAME = "name";
@@ -256,7 +255,7 @@ public class Configuration extends DomainResource implements IBaseResource {
 	@SearchParamDefinition(
 		name = "type",
 		path = "Configuration.type",
-		description = "",
+		description = "Search for a Configuration by type",
 		type = "token"
 	)
 	public static final String SP_TYPE = "type";
@@ -265,7 +264,7 @@ public class Configuration extends DomainResource implements IBaseResource {
 	@SearchParamDefinition(
 		name = "status",
 		path = "Configuration.status",
-		description = "",
+		description = "Search for a Configuration by status",
 		type = "token"
 	)
 	public static final String SP_STATUS = "status";

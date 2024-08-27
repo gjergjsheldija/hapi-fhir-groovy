@@ -17,6 +17,7 @@ import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.model.api.annotation.Description;
 import ca.uhn.fhir.rest.annotation.Operation;
 import ca.uhn.fhir.rest.annotation.OperationParam;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.StringParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import com.clinomic.configuration.Configuration;
@@ -76,12 +77,13 @@ public class ScriptingProvider {
 	@Operation(name = "load-script", idempotent = false, type = Configuration.class)
 	public OperationOutcome loadScript(
 		@Description(shortDefinition = "The name of the Script to load")
-		@OperationParam(name = "name", min = 1, max = 1, typeName = "string") StringType name
+		@OperationParam(name = "name", min = 1, max = 1, typeName = "string") StringType name,
+		RequestDetails theRequestDetails
 	) {
 
 		String storedScript = "";
 		try {
-			storedScript = getScript(name);
+			storedScript = getScript(name, theRequestDetails);
 		} catch (Exception e) {
 			return generateErrorOutcome("Script not found : " + name);
 		}
@@ -99,12 +101,13 @@ public class ScriptingProvider {
 	@Operation(name = "unload-script", idempotent = false, type = Configuration.class)
 	public OperationOutcome unloadScript(
 		@Description(shortDefinition = "The name of the Script to load")
-		@OperationParam(name = "name", min = 1, max = 1, typeName = "string") StringType name
+		@OperationParam(name = "name", min = 1, max = 1, typeName = "string") StringType name,
+		RequestDetails theRequestDetails
 	) {
 
 		String storedScript = "";
 		try {
-			storedScript = getScript(name);
+			storedScript = getScript(name, theRequestDetails);
 		} catch (Exception e) {
 			return generateErrorOutcome("Script not found : " + name);
 		}
@@ -152,14 +155,17 @@ public class ScriptingProvider {
 		}
 	}
 
-	private String getScript(StringType scriptName) {
+	private String getScript(StringType scriptName, RequestDetails theRequestDetails) {
 		SearchParameterMap parameterMap = new SearchParameterMap();
 		parameterMap.add(Configuration.SP_NAME, new StringParam(scriptName.toString()));
 		parameterMap.add(Configuration.SP_TYPE, new TokenParam(Configuration.ConfigurationType.SCRIPT.getDisplay()));
 		parameterMap.add(Configuration.SP_STATUS, new TokenParam(Configuration.ConfigurationStatus.ACTIVE.getDisplay()));
+		parameterMap.setLoadSynchronous(true);
 
 		List<IBaseResource> configurations = daoRegistry
-			.getResourceDao(Configuration.class).search(parameterMap).getAllResources();
+			.getResourceDao(Configuration.class)
+			.search(parameterMap, theRequestDetails)
+			.getAllResources();
 
 		return ((Configuration) configurations.get(0)).getBody().toString();
 	}
