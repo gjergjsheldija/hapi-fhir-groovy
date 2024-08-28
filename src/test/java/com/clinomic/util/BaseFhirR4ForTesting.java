@@ -18,6 +18,8 @@ import ca.uhn.fhir.jpa.starter.Application;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.server.util.ISearchParamRegistry;
 import com.clinomic.configuration.Configuration;
+import org.hl7.fhir.r4.model.BooleanType;
+import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.Patient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -35,6 +37,8 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 		"hapi.fhir.mdm_enabled=false",
 		"hapi.fhir.cr_enabled=false",
 		"hapi.fhir.subscription.websocket_enabled=false",
+		"hapi.fhir.delete-expunge-enabled=true",
+		"hapi.fhir.allow-multiple-delete=true",
 		"hapi.fhir.log_request_body=true",
 		"hapi.fhir.delete-expunge-enabled=true",
 		"hapi.fhir.allow_multiple_delete=true",
@@ -54,4 +58,16 @@ public class BaseFhirR4ForTesting {
 	@LocalServerPort
 	public int port;
 
+	public void cleanUp() {
+		Parameters parameters = new Parameters();
+		parameters.addParameter().setName("expungeEverything").setValue(new BooleanType(true));
+
+		Parameters outcome = ourClient
+			.operation()
+			.onServer()
+			.named("$expunge")
+			.withParameters(parameters)
+			.execute();
+
+	}
 }

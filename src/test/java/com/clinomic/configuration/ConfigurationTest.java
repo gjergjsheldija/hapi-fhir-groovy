@@ -16,13 +16,17 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import com.clinomic.util.BaseFhirR4ForTesting;
-import org.hl7.fhir.r4.model.*;
+import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.Enumerations;
+import org.hl7.fhir.r4.model.SearchParameter;
+import org.hl7.fhir.r4.model.StringType;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 
-public class ConfigurationTest extends BaseFhirR4ForTesting {
+class ConfigurationTest extends BaseFhirR4ForTesting {
 
 	@Autowired
 	ConfigurationResourceProvider configurationResourceProvider;
@@ -69,13 +73,6 @@ public class ConfigurationTest extends BaseFhirR4ForTesting {
 
 	@Test
 	void testCreateAndUpdate() {
-		ourClient
-			.operation()
-			.onServer()
-			.named("$expunge")
-			.withParameter(Parameters.class, "expungeEverything", new BooleanType(true))
-			.execute();
-
 		Configuration c = new Configuration();
 		c.setName("test_name");
 		c.setStatus(Configuration.ConfigurationStatus.ACTIVE);
@@ -89,7 +86,7 @@ public class ConfigurationTest extends BaseFhirR4ForTesting {
 			.returnBundle(Bundle.class)
 			.execute();
 
-		assert (!searchResult.getEntry().isEmpty());
+		assert (searchResult.getEntry().size() == 1);
 		assert ((Configuration) searchResult.getEntry().get(0).getResource()).getName().equals("test_name");
 
 		c.setName("test_name_new");
@@ -103,5 +100,10 @@ public class ConfigurationTest extends BaseFhirR4ForTesting {
 		assert (searchResultUpdate.getEntry().size() == 1);
 		assert ((Configuration) searchResultUpdate.getEntry().get(0).getResource()).getName().equals("test_name_new");
 
+	}
+
+	@AfterEach
+	public void after() {
+		cleanUp();
 	}
 }

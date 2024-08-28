@@ -203,6 +203,9 @@ hapi:
       - ca.uhn.fhir.jpa.subscription.util.SubscriptionDebugLogInterceptor
       - com.clinomic.auditevent.AuditEventInterceptor
       - com.clinomic.security.SecurityInterceptor
+      - com.clinomic.terminology.TerminologyCapabilityInterceptor
+
+
 
     # comma-separated list of fully qualified provider classes.
     # classes listed here will be fetched from the Spring context when combined with 'custom-bean-packages',

@@ -18,6 +18,7 @@ import com.clinomic.util.BaseFhirR4ForTesting;
 import nl.altindag.log.LogCaptor;
 import org.hl7.fhir.r4.model.Patient;
 import org.json.JSONException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
@@ -77,4 +78,8 @@ public class CustomLoggingInterceptorTest extends BaseFhirR4ForTesting {
 		assertEquals("REST", MDC.get("message_source"));
 	}
 
+	@AfterEach
+	public void after() {
+		cleanUp();
+	}
 }

@@ -23,6 +23,7 @@ import org.apache.commons.io.IOUtils;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.SearchParameter;
 import org.hl7.fhir.r4.model.StringType;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -116,5 +117,10 @@ public class InterceptorSvcImplTest extends BaseFhirR4ForTesting {
 		c.setBody(new StringType(IOUtils.toString(source)));
 
 		ourClient.create().resource(c).execute();
+	}
+
+	@AfterEach
+	public void after() {
+		cleanUp();
 	}
 }
