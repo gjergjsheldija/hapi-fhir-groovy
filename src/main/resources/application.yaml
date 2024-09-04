@@ -204,6 +204,7 @@ hapi:
       - com.clinomic.auditevent.AuditEventInterceptor
       - com.clinomic.security.SecurityInterceptor
       - com.clinomic.terminology.TerminologyCapabilityInterceptor
+      - com.clinomic.customoperation.observation.CustomResponseInterceptor
 
 
 
