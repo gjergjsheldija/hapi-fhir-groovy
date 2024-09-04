@@ -18,19 +18,19 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
-import org.hl7.fhir.r4.model.Bundle;
-import org.hl7.fhir.r4.model.Extension;
 import org.hl7.fhir.r4.model.Observation;
-import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.Parameters;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -38,7 +38,6 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import ca.uhn.fhir.jpa.api.dao.IFhirResourceDaoObservation;
-import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.DateParam;
 import ca.uhn.fhir.rest.param.NumberParam;
@@ -82,40 +81,45 @@ class GroupByIntervalTest {
 	}
 
 	@Test
-	void testGroupByInterval() {
-		List<Object[]> queryResults = new ArrayList<>();
-		queryResults.add(new Object[] { Date.from(startZonedDateTime.toInstant()), "observation1" });
+    void testGroupByInterval() {
+        ReferenceParam encounter = new ReferenceParam("Encounter", "3b205f2f-3813-4bff-9945-1729d52b9eb0");
+        List<TokenParam> codes = Arrays.asList(new TokenParam("http://loinc.org", "8867-4"),
+                new TokenParam("http://snomed.info", "55553"));
+        DateParam startDateTime = new DateParam("2024-07-24T01:00:00Z");
+        DateParam endDateTime = new DateParam("2024-07-24T03:00:00Z");
+        NumberParam interval = new NumberParam(3600);
 
-		when(entityManager.createNativeQuery(anyString())).thenReturn(query);
-		when(query.getResultList()).thenReturn(queryResults);
+        Query mockQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString())).thenReturn(mockQuery);
+        when(mockQuery.setParameter(anyString(), any())).thenReturn(mockQuery);
+        when(mockQuery.getResultList()).thenReturn(
+                Arrays.asList(
+                        new Object[]{Date.from(Instant.parse("2024-07-24T01:00:00Z")), "uuid-1", "http://loinc.org", "8867-4"},
+                        new Object[]{Date.from(Instant.parse("2024-07-24T02:00:00Z")), "uuid-2", "http://snomed.info", "55553"}
+                )
+        );
 
-		Observation observation = new Observation();
-		observation.setId("observation1");
+        Observation mockObservation1 = new Observation();
+        mockObservation1.setId("uuid-1");
+        Observation mockObservation2 = new Observation();
+        mockObservation2.setId("uuid-2");
 
-		List<Observation> observations = List.of(observation);
-		when(myObservationDao.searchForResources(any(SearchParameterMap.class), any(RequestDetails.class)))
-				.thenReturn(observations);
+        when(myObservationDao.searchForResources(any(), any())).thenReturn(Arrays.asList(mockObservation1, mockObservation2));
 
-		Bundle resultBundle = groupByInterval.groupByInterval(
-				new ReferenceParam("Encounter/3b205f2f-3813-4bff-9945-1729d52b9eb0"),
-				new TokenParam("http://loinc.org", "8867-4"),
-				new DateParam(startDateStr), 
-				new DateParam(endDateStr),
-				new NumberParam(3600),
-				requestDetails);
+        Parameters result = groupByInterval.groupByInterval(encounter, codes, startDateTime, endDateTime, interval, requestDetails);
 
-		assertNotNull(resultBundle);
-		assertEquals(Bundle.BundleType.SEARCHSET, resultBundle.getType());
-		assertEquals(1, resultBundle.getEntry().size());
+        assertEquals(2, result.getParameter().size());
 
-		Observation resultObservation = (Observation) resultBundle.getEntryFirstRep().getResource();
-		assertEquals("observation1", resultObservation.getIdElement().getIdPart());
+        Parameters.ParametersParameterComponent firstSystemParam = result.getParameter().get(0);
+        assertEquals("http://loinc.org|8867-4", firstSystemParam.getName());
+        assertEquals(1, firstSystemParam.getPart().size());
+        assertEquals(mockObservation1, firstSystemParam.getPart().get(0).getResource());
 
-		Extension extension = resultObservation.getMeta().getExtension().get(0);
-		assertEquals("https://fhir.mona.icu/StructureDefinition/intervalStartingPoint", extension.getUrl());
-		assertEquals(startZonedDateTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
-				((StringType) extension.getValue()).getValue());
-	}
+        Parameters.ParametersParameterComponent secondSystemParam = result.getParameter().get(1);
+        assertEquals("http://snomed.info|55553", secondSystemParam.getName());
+        assertEquals(1, secondSystemParam.getPart().size());
+        assertEquals(mockObservation2, secondSystemParam.getPart().get(0).getResource());
+    }
 
 	@Test
 	void testParseZonedDateTime() {
@@ -133,28 +137,33 @@ class GroupByIntervalTest {
 	void testGroupByIntervalWithNoResults() {
 		when(entityManager.createNativeQuery(anyString())).thenReturn(query);
 		when(query.getResultList()).thenReturn(List.of());
+		
+		List<TokenParam> codes = Arrays.asList(new TokenParam("http://loinc.org", "8867-4"),
+                new TokenParam("http://snomed.info", "55553"));
 
-		Bundle resultBundle = groupByInterval.groupByInterval(
+		Parameters result = groupByInterval.groupByInterval(
 				new ReferenceParam("Encounter/3b205f2f-3813-4bff-9945-1729d52b9eb0"),
-				new TokenParam("http://loinc.org", "8867-4"),
+				codes,
 				new DateParam(startDateStr),
 				new DateParam(endDateStr),
 				new NumberParam(3600),
 				requestDetails);
 
-		assertNotNull(resultBundle);
-		assertEquals(Bundle.BundleType.SEARCHSET, resultBundle.getType());
-		assertTrue(resultBundle.getEntry().isEmpty());
+		assertNotNull(result);
+		assertTrue(result.getParameter().isEmpty());
 	}
 
 	@Test
 	void testGroupByIntervalWithException() {
 		when(entityManager.createNativeQuery(anyString())).thenThrow(new RuntimeException("Database error"));
 
+		List<TokenParam> codes = Arrays.asList(new TokenParam("http://loinc.org", "8867-4"),
+                new TokenParam("http://snomed.info", "55553"));
+		
 		assertThrows(RuntimeException.class,
 				() -> groupByInterval.groupByInterval(
 						new ReferenceParam("Encounter/3b205f2f-3813-4bff-9945-1729d52b9eb0"),
-						new TokenParam("http://loinc.org", "8867-4"),
+						codes,
 						new DateParam(startDateStr),
 						new DateParam(endDateStr),
 						new NumberParam(3600),
