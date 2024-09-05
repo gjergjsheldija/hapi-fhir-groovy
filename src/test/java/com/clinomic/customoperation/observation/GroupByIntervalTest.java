@@ -12,6 +12,7 @@
 
 package com.clinomic.customoperation.observation;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -108,14 +109,15 @@ class GroupByIntervalTest {
 
         Parameters result = groupByInterval.groupByInterval(encounter, codes, startDateTime, endDateTime, interval, requestDetails);
 
-        assertEquals(2, result.getParameter().size());
+        assertEquals(1, result.getParameter().size());
+        assertEquals(2, result.getParameter().get(0).getPart().size());
 
-        Parameters.ParametersParameterComponent firstSystemParam = result.getParameter().get(0);
+        Parameters.ParametersParameterComponent firstSystemParam = result.getParameter().get(0).getPart().get(0);
         assertEquals("http://loinc.org|8867-4", firstSystemParam.getName());
         assertEquals(1, firstSystemParam.getPart().size());
         assertEquals(mockObservation1, firstSystemParam.getPart().get(0).getResource());
 
-        Parameters.ParametersParameterComponent secondSystemParam = result.getParameter().get(1);
+        Parameters.ParametersParameterComponent secondSystemParam = result.getParameter().get(0).getPart().get(1);
         assertEquals("http://snomed.info|55553", secondSystemParam.getName());
         assertEquals(1, secondSystemParam.getPart().size());
         assertEquals(mockObservation2, secondSystemParam.getPart().get(0).getResource());
@@ -150,7 +152,10 @@ class GroupByIntervalTest {
 				requestDetails);
 
 		assertNotNull(result);
-		assertTrue(result.getParameter().isEmpty());
+		assertFalse(result.getParameter().isEmpty());
+		assertEquals(1, result.getParameter().size());
+		assertTrue(result.getParameter().get(0).getPart().isEmpty());
+		assertEquals("3600", result.getParameter().get(0).getName());
 	}
 
 	@Test
