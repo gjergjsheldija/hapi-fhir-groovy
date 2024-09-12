@@ -81,6 +81,7 @@
             <logger level="DEBUG" 	name="com.clinomic"/>
             <logger level="TRACE" 	name="com.clinomic.configuration.ConfigurationResourceProvider"/>
             <logger level="TRACE" 	name="scripting"/>
+            <logger level="DEBUG" name="org.opencds.cqf.cql.engine.debug"/>
             <root level="INFO">
                 <appender-ref ref="CONSOLE"/>
             </root>
