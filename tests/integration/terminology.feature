@@ -20,7 +20,7 @@ Feature: Test terminology features
           "http://hl7.org/fhir/StructureDefinition/TerminologyCapabilities"
         ]
       },
-      "version": "7.2.0",
+      "version": "7.4.0",
       "name": "HAPI FHIR Server",
       "status": "draft"
     }
