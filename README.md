@@ -21,7 +21,7 @@ If you want to run this with an in-memory database, use to config from the `appl
 the dialect needed for the database is not picked up from the `.env` var, thus putting the dialect in the 
 `application.yaml` is required,
 
-#### OpenSearch - WIP
+#### Elasticsearch
 
 In order to enable OpenSearch, `hibernate.search.enabled` has to be enabled, so does `advanced_lucene_indexing`.
 
