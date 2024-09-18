@@ -53,6 +53,7 @@ services:
       - ./config/grafana/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml
       - ./config/grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
       - ./config/grafana/fhir-server-dashboard.json:/etc/grafana/provisioning/dashboards/fhir-server-dashboard.json
+      - ./config/grafana/infinispan-server-dashboard.json:/etc/grafana/provisioning/dashboards/infinispan-server-dashboard.json
     environment:
       GF_SECURITY_ADMIN_USER: ${ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
@@ -80,6 +81,16 @@ services:
       - clinomic-fhir-server
     ports:
       - 9090:9090
+
+  infinispan-server:
+    image: infinispan/server:15.1
+    env_file:
+      - .env
+    environment:
+      USER: admin
+      PASS: password
+    ports:
+      - "11222:11222"
 
 volumes:
   postgres:

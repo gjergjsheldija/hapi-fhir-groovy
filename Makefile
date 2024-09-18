@@ -55,13 +55,18 @@ start-databases: ## Start the databases used by the different services
 	docker compose -p ${APPLICATION_NAME} up -d --remove-orphans clinomic-fhir-postgres
 .PHONY: start-databases
 
+start-infinispan: ## Start the databases used by the different services
+	# Start all containers
+	docker compose -p ${APPLICATION_NAME} up -d --remove-orphans infinispan-server
+.PHONY: start-infinispan
+
 start-server: ## Start the application
 	# Start all containers
 	docker compose -p ${APPLICATION_NAME} up -d --remove-orphans clinomic-fhir-server
 .PHONY: start-server
 
 start: ## Alias to start
-start:	start-databases start-server
+start:	start-infinispan start-databases start-server
 .PHONY: start
 
 push-image: ## Push image to the internal docker registry
