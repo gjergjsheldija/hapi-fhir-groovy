@@ -9,15 +9,15 @@ server:
   port: 8080
   tomcat:
     relaxed-query-chars: '|,{,},[,]'
-#Adds the option to go to eg. http://localhost:8080/actuator/health for seeing the running configuration
+#Adds the option to go to eg. http://localhost:9100/actuator/health for seeing the running configuration
 #see https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html#actuator.endpoints
 management:
-  server: 
+  server:
     port: 9100
   endpoints:
     web:
       exposure:
-        include: health,metrics,prometheus
+        include: "health, metrics, prometheus, info"
   metrics:
     enabled: true
   health:
@@ -33,10 +33,14 @@ management:
     metrics:
       export:
         enabled: true
+  info:
+    env:
+      enabled: true  # This enables items defined in this file with "info" prefix to be listed at actuator/info. See the bottom of the file for the list of info items.
+
 spring:
   main:
     allow-circular-references: true
-    #allow-bean-definition-overriding: true
+    allow-bean-definition-overriding: true
   flyway:
     enabled: false
     baselineOnMigrate: true
@@ -257,8 +261,6 @@ hapi:
       - com.clinomic.terminology.TerminologyCapabilityInterceptor
       - com.clinomic.customoperation.observation.CustomResponseInterceptor
 
-
-
     # comma-separated list of fully qualified provider classes.
     # classes listed here will be fetched from the Spring context when combined with 'custom-bean-packages',
     # or will be instantiated via reflection using an no-arg constructor; then registered with the server
@@ -283,8 +285,9 @@ hapi:
     #      name: fhirtest.access
     max_binary_size: 104857600
     max_page_size: 10000
-    retain_cached_searches_mins: 0
-    reuse_cached_search_results_millis: 0
+    cache_type: ${CACHE_TYPE:DATABASE}                              # If "INFINISPAN" (case insensitive!), then use Infinispan to store SearchResults, else use the Database.
+    retain_cached_searches_mins: ${RETAIN_CACHED_SEARCHES_MINS:0}                         # Used when entries are put into the cache. ... jpaStorageSettings.setExpireSearchResultsAfterMillis(retainCachedSearchesMinutes * 60 * 1000);
+    reuse_cached_search_results_millis: ${REUSE_CACHED_SEARCH_RESULTS_MILLIS:0}   # Setting this to 0 will turn off caching in SearchCoordinatorSvc.
     tester:
       home:
         name: Local Tester
@@ -346,3 +349,12 @@ hapi:
 #  protocol: 'http'
 #  schema_management_strategy: CREATE
 #  username: SomeUsername
+
+searchcache:
+  infinispan:
+    create.cache: ${INFINISPAN_CREATE_CACHE:false}
+    cache.name: ${INFINISPAN_CACHE_NAME:SearchResultsCache}
+    servers: ${INFINISPAN_ADDRESS:127.0.0.1}:${INFINISPAN_PORT:11222}
+    protocol_version: PROTOCOL_VERSION_23
+    username: ${INFINISPAN_USER:admin}
+    password: ${INFINISPAN_PASSWORD:password}
