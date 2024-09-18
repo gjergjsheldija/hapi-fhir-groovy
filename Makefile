@@ -55,10 +55,16 @@ start-databases: ## Start the databases used by the different services
 	docker compose -p ${APPLICATION_NAME} up -d --remove-orphans clinomic-fhir-postgres
 .PHONY: start-databases
 
-start-infinispan: ## Start the databases used by the different services
+start-infinispan: ## Start the caching server
 	# Start all containers
 	docker compose -p ${APPLICATION_NAME} up -d --remove-orphans infinispan-server
 .PHONY: start-infinispan
+
+start-prometheus: ## Start the prometheus
+	# Start all containers
+	docker compose -p ${APPLICATION_NAME} up -d --remove-orphans prometheus
+.PHONY: start-prometheus
+
 
 start-server: ## Start the application
 	# Start all containers
@@ -66,7 +72,7 @@ start-server: ## Start the application
 .PHONY: start-server
 
 start: ## Alias to start
-start:	start-infinispan start-databases start-server
+start:	start-infinispan start-databases start-server start-infinispan start-prometheus
 .PHONY: start
 
 push-image: ## Push image to the internal docker registry

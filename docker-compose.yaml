@@ -84,10 +84,12 @@ services:
 
   infinispan-server:
     image: infinispan/server:15.1
+    volumes:
+      - ./config/infinispan/infinispan.xml:/opt/infinispan/server/conf/infinispan.xml
     env_file:
       - .env
     environment:
-      USER: admin
+      USER: admins
       PASS: password
     ports:
       - "11222:11222"
