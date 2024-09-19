@@ -260,7 +260,7 @@ hapi:
       - com.clinomic.security.SecurityInterceptor
       - com.clinomic.terminology.TerminologyCapabilityInterceptor
       - com.clinomic.customoperation.observation.CustomResponseInterceptor
-      - com.clinomic.valiadation.CustomRequestValidatingInterceptor
+      - com.clinomic.validation.CustomRequestValidatingInterceptor
 
     # comma-separated list of fully qualified provider classes.
     # classes listed here will be fetched from the Spring context when combined with 'custom-bean-packages',
