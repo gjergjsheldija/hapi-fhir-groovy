@@ -12,21 +12,19 @@
 
 package com.clinomic.validation;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.when;
-
+import ca.uhn.fhir.rest.api.server.RequestDetails;
+import ca.uhn.fhir.rest.server.exceptions.AuthenticationException;
+import com.clinomic.configuration.Configuration;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 
-import com.clinomic.configuration.Configuration;
-
-import ca.uhn.fhir.rest.api.server.RequestDetails;
-import ca.uhn.fhir.rest.server.exceptions.AuthenticationException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
 class CustomRequestValidatingInterceptorTest {
 
@@ -55,7 +53,7 @@ class CustomRequestValidatingInterceptorTest {
 		when(requestDetails.getResourceName()).thenReturn(Configuration.class.getSimpleName());
 
 		boolean result = interceptor.incomingRequestPostProcessed(requestDetails, httpServletRequest,
-				httpServletResponse);
+			httpServletResponse);
 
 		assertTrue(result, "Validation should be skipped for Configuration resource");
 	}

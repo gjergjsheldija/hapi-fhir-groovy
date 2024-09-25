@@ -2,7 +2,8 @@
 
 ## Description
 
-Switch caching of Search Results from the Database table "hfj_search_result" to cache "SearchResultsCache" in Infinispan.
+Switch caching of Search Results from the Database table "hfj_search_result" to cache "SearchResultsCache" in
+Infinispan.
 
 ## Configuration
 

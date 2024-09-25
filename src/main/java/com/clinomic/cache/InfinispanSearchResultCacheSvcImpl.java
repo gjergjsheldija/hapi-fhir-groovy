@@ -50,6 +50,9 @@ public class InfinispanSearchResultCacheSvcImpl implements ISearchResultCacheSvc
 	@Value("${searchcache.infinispan.protocol_version:PROTOCOL_VERSION_23}")
 	private HotrodProtocolVersionEnum myProtocolVersion;
 
+	@Value("${searchcache.infinispan.enable_security}")
+	private Boolean mySecurityEnabled;
+
 	@Value("${searchcache.infinispan.username}")
 	private String myUsername;
 
@@ -72,6 +75,7 @@ public class InfinispanSearchResultCacheSvcImpl implements ISearchResultCacheSvc
 			this.myRemoteCacheManager = new InfinispanRemoteCacheManager(
 				this.myInfinispanServers,
 				this.myProtocolVersion,
+				this.mySecurityEnabled,
 				this.myUsername,
 				this.myPassword,
 				this.myInfinispanCacheName,

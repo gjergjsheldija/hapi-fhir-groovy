@@ -12,4 +12,4 @@ scrape_configs:
   - job_name: 'infinispan-server'
     metrics_path: '/metrics'
     static_configs:
-      - targets: ['infinispan-server:11222']
+      - targets: [ 'infinispan-server:11222' ]

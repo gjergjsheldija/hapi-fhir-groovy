@@ -81,14 +81,14 @@
             <logger level="TRACE" 	name="com.clinomic.customoperation.observation.GroupByInterval"/>
             <logger level="DEBUG" 	name="com.clinomic"/>
             <logger level="TRACE" 	name="com.clinomic.configuration.ConfigurationResourceProvider"/>
-            <logger level="WARN" 	name="com.clinomic.security.SecurityInterceptor"/>
+            <logger level="WARN" name="com.clinomic.security.SecurityInterceptor"/>
             <logger level="TRACE" 	name="scripting"/>
 
             <!--logger level="TRACE" 	name="ca.uhn.fhir.jpa.search"/>
             <logger level="DEBUG" 	name="ca.uhn.fhir.jpa"/-->
 
-            <logger level="INFO" 	name="org.infinispan"/>
-            <logger level="INFO" 	name="org.infinispan.client.hotrod"/>
+            <logger level="INFO" name="org.infinispan"/>
+            <logger level="INFO" name="org.infinispan.client.hotrod"/>
 
             <logger level="DEBUG" name="org.opencds.cqf.cql.engine.debug"/>
 

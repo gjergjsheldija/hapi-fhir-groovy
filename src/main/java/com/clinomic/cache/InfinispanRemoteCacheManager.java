@@ -32,13 +32,16 @@ public class InfinispanRemoteCacheManager implements BasicCacheContainer {
 	public InfinispanRemoteCacheManager(
 		String theInfinispanServers,
 		HotrodProtocolVersionEnum theProtocolVersion,
+		Boolean theSecurityEnabled,
 		String theUsername,
 		String thePassword,
 		String theCache,
 		Boolean theForcedCreation) {
 		ConfigurationBuilder builder = new ConfigurationBuilder();
 		builder.addServers(theInfinispanServers);
-		builder.security().authentication().username(theUsername).password(thePassword);
+		if (theSecurityEnabled == true) {
+			builder.security().authentication().username(theUsername).password(thePassword);
+		}
 		if (HotrodProtocolVersionEnum.getDeprecatedVersions().contains(theProtocolVersion)) {
 			throw new ConfigurationException("Hotrod protocol version " + theProtocolVersion + " is no longer supported.");
 		} else {

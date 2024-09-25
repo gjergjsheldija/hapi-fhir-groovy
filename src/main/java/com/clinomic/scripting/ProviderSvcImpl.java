@@ -36,8 +36,9 @@ import java.util.stream.Collectors;
 public class ProviderSvcImpl implements IScriptingSvc {
 
 	private static final Logger ourLog = LoggerFactory.getLogger(ProviderSvcImpl.class);
-	private static final String CUSTOM_SCRIPT = "CustomScript";
+	static final String CUSTOM_SCRIPT = "CustomScript";
 	static final String PROVIDER = "Provider";
+	static final String TYPE = "Provider";
 
 	@Autowired
 	@Lazy

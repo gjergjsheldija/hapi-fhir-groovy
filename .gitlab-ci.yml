@@ -11,18 +11,18 @@ variables:
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
   FHIR_SERVER_IMAGE_NAME: "$CI_REGISTRY_IMAGE/clinomic-fhir-server"
 stages:
-- security
-- build
-- test
-- deploy
+  - security
+  - build
+  - test
+  - deploy
 include:
-- template: Security/Dependency-Scanning.gitlab-ci.yml
-- template: Jobs/Secret-Detection.latest.gitlab-ci.yml
-- template: Security/SAST.gitlab-ci.yml
+  - template: Security/Dependency-Scanning.gitlab-ci.yml
+  - template: Jobs/Secret-Detection.latest.gitlab-ci.yml
+  - template: Security/SAST.gitlab-ci.yml
 cache:
   key: "${CI_PROJECT_NAME}"
   paths:
-  - ".m2/repository"
+    - ".m2/repository"
 unit-test:
   stage: test
   image: docker.io/library/maven:3.9.4-eclipse-temurin-17
@@ -30,28 +30,28 @@ unit-test:
     when: always
     reports:
       junit:
-      - target/surefire-reports/*.xml
+        - target/surefire-reports/*.xml
     paths:
-    - target/surefire-reports/
+      - target/surefire-reports/
     expire_in: 1 week
   script:
-  - mvn test
+    - mvn test
   rules:
-  - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-  - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: "$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
 build docker image:
   stage: build
   image: docker:26.1.1
   services:
-  - docker:26.1.1-dind
+    - docker:26.1.1-dind
   before_script:
-  - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin
-    "$CI_REGISTRY"
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin
+      "$CI_REGISTRY"
   script:
-  - echo "Building and pushing FHIR server docker tagged image...."
-  - docker build . -t "$FHIR_SERVER_IMAGE_NAME:$CI_COMMIT_TAG" --target default -f
-    ./Dockerfile && docker push "$FHIR_SERVER_IMAGE_NAME:$CI_COMMIT_TAG"
+    - echo "Building and pushing FHIR server docker tagged image...."
+    - docker build . -t "$FHIR_SERVER_IMAGE_NAME:$CI_COMMIT_TAG" --target default -f
+      ./Dockerfile && docker push "$FHIR_SERVER_IMAGE_NAME:$CI_COMMIT_TAG"
   rules:
-  - if: "$CI_COMMIT_TAG"
+    - if: "$CI_COMMIT_TAG"
 sast:
   stage: test
