@@ -56,6 +56,7 @@ spring:
     # database connection pool size
     hikari:
       maximum-pool-size: 10
+  dao-scheduling-enabled: ${JOB_SCHEDULING:true}
   jpa:
     properties:
       hibernate.format_sql: false
@@ -337,6 +338,7 @@ hapi:
       enabled: ${SECURITY_ENABLED:false}
       server: ${SECURITY_SERVER:http://localhost:8181/realms/clinomic}
       jwks: ${SECURITY_JWKS:http://localhost:8181/realms/clinomic/protocol/openid-connect/certs}
+    dao-scheduling-enabled: ${JOB_SCHEDULING:true}
 
 
 #elasticsearch:
@@ -357,5 +359,6 @@ searchcache:
     cache.name: ${INFINISPAN_CACHE_NAME:SearchResultsCache}
     servers: ${INFINISPAN_ADDRESS:127.0.0.1}:${INFINISPAN_PORT:11222}
     protocol_version: PROTOCOL_VERSION_23
+    enable_security: ${INFINISPAN_SECURITY_ENABLED:false}
     username: ${INFINISPAN_USER:admin}
     password: ${INFINISPAN_PASSWORD:password}

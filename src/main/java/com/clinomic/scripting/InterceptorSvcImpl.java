@@ -32,8 +32,9 @@ import java.util.stream.Collectors;
 public class InterceptorSvcImpl implements IScriptingSvc {
 
 	private static final Logger ourLog = LoggerFactory.getLogger(InterceptorSvcImpl.class);
-	private static final String CUSTOM_SCRIPT = "CustomScript";
+	static final String CUSTOM_SCRIPT = "CustomScript";
 	static final String INTERCEPTOR = "Interceptor";
+	static final String TYPE = "Interceptor";
 
 	@Autowired
 	IInterceptorService interceptorService;

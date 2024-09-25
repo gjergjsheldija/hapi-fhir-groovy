@@ -23,6 +23,7 @@ import ca.uhn.fhir.rest.param.TokenParam;
 import com.clinomic.configuration.Configuration;
 import jakarta.annotation.PostConstruct;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.CodeableConcept;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.StringType;
 import org.slf4j.Logger;
@@ -40,7 +41,8 @@ public class ScriptingProvider {
 
 	private enum scriptType {
 		INTERCEPTOR,
-		PROVIDER
+		PROVIDER,
+		SCHEDULED_SCRIPT
 	}
 
 	@Autowired
@@ -49,6 +51,10 @@ public class ScriptingProvider {
 
 	@Autowired
 	InterceptorSvcImpl interceptorSvc;
+
+	@Autowired
+	ScheduledSvcImpl scheduledSvc;
+
 
 	@Autowired
 	DaoRegistry daoRegistry;
@@ -64,11 +70,13 @@ public class ScriptingProvider {
 	public OperationOutcome listScripts() {
 		List<Object> providerList = providerSvc.listCustomScripts();
 		List<Object> interceptorList = interceptorSvc.listCustomScripts();
+		List<Object> scheduletList = scheduledSvc.listCustomScripts();
 
 		OperationOutcome outcome = new OperationOutcome();
 
-		buildOperationOutcome(outcome, providerList);
-		buildOperationOutcome(outcome, interceptorList);
+		buildOperationOutcome(providerSvc.TYPE, outcome, providerList);
+		buildOperationOutcome(interceptorSvc.TYPE, outcome, interceptorList);
+		buildOperationOutcome(scheduledSvc.TYPE, outcome, scheduletList);
 
 		return outcome;
 	}
@@ -128,6 +136,8 @@ public class ScriptingProvider {
 			providerSvc.unloadCustomScript(scriptName);
 		} else if (type == scriptType.INTERCEPTOR) {
 			interceptorSvc.unloadCustomScript(scriptName);
+		} else if (type == scriptType.SCHEDULED_SCRIPT) {
+			scheduledSvc.unloadCustomScript(scriptName);
 		} else {
 			throw new RuntimeException("Script is neither an Interceptor nor a Provider");
 		}
@@ -140,6 +150,8 @@ public class ScriptingProvider {
 			providerSvc.loadCustomScript(name, storedScript);
 		} else if (type == scriptType.INTERCEPTOR) {
 			interceptorSvc.loadCustomScript(name, storedScript);
+		} else if (type == scriptType.SCHEDULED_SCRIPT) {
+			scheduledSvc.loadCustomScript(name, storedScript);
 		} else {
 			throw new RuntimeException("Script is neither an Interceptor nor a Provider");
 		}
@@ -150,8 +162,10 @@ public class ScriptingProvider {
 			return scriptType.PROVIDER;
 		} else if (script.contains(InterceptorSvcImpl.INTERCEPTOR)) {
 			return scriptType.INTERCEPTOR;
+		} else if (script.contains(ScheduledSvcImpl.SCHEDULED_SCRIPT)) {
+			return scriptType.SCHEDULED_SCRIPT;
 		} else {
-			throw new RuntimeException("Script is neither an Interceptor nor a Provider");
+			throw new RuntimeException("Script type unknown : " + script);
 		}
 	}
 
@@ -196,12 +210,13 @@ public class ScriptingProvider {
 		return outcome;
 	}
 
-	private void buildOperationOutcome(OperationOutcome outcome, List<Object> scripts) {
+	private void buildOperationOutcome(String type, OperationOutcome outcome, List<Object> scripts) {
 
 		for (Object script : scripts) {
 			OperationOutcome.OperationOutcomeIssueComponent issue = new OperationOutcome.OperationOutcomeIssueComponent();
 			issue.setSeverity(OperationOutcome.IssueSeverity.INFORMATION);
 			issue.setCode(OperationOutcome.IssueType.INFORMATIONAL);
+			issue.setDetails(new CodeableConcept().setText(type));
 			issue.setDiagnostics(scripts.toString());
 
 			outcome.addIssue(issue);

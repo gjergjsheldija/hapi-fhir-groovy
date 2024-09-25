@@ -25,14 +25,14 @@ public class InfinispanConfig {
 	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(InfinispanConfig.class);
 
 	// Here we override this bean so as to use Infinispan instead of the DB for storing search results.
-   // (... if the hapi.fhir.cache_type property is set to "infinispan", that is.)
-   @ConditionalOnProperty(prefix = "hapi.fhir", name = "cache_type", havingValue = "INFINISPAN")
-   @Bean
+	// (... if the hapi.fhir.cache_type property is set to "infinispan", that is.)
+	@ConditionalOnProperty(prefix = "hapi.fhir", name = "cache_type", havingValue = "INFINISPAN")
+	@Bean
 	@Primary
-   public ISearchResultCacheSvc searchResultCacheSvc() {
+	public ISearchResultCacheSvc searchResultCacheSvc() {
 
 		log.info("Overriding DatabaseCache with InfinispanCache.");
 
-   	return new InfinispanSearchResultCacheSvcImpl();
-   }
+		return new InfinispanSearchResultCacheSvcImpl();
+	}
 }

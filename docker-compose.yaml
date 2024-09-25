@@ -89,7 +89,7 @@ services:
     env_file:
       - .env
     environment:
-      USER: admins
+      USER: admin
       PASS: password
     ports:
       - "11222:11222"

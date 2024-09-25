@@ -1,5 +1,7 @@
 # Scripting
 
+[[_TOC_]]
+
 ## General overview
 
 Scripting adds the ability to add [Interceptors](https://hapifhir.io/hapi-fhir/docs/interceptors/interceptors.html) or
@@ -8,6 +10,9 @@ scripts
 are written in [Groovy](https://groovy-lang.org/). They provide an extension mechanism for the server, without having
 restart it. Scrips are contained in a single file, which is stored in the `Configuration` resource.
 
+:warning: **Note** : Those scripts are not persisted though application restarts and do not store their state.
+Meaning they have to be restarted each time the server restarts
+
 ## Storing a script
 
 Scripts are stored in the `Configuration` resource the following way :
@@ -15,16 +20,11 @@ Scripts are stored in the `Configuration` resource the following way :
 ```json
 {
   "resourceType": "Configuration",
-  "name": "HealthCheck",
-  // the name should be same as the Class name
-  "defaultValue": "",
-  // there is no default value in this case 
+  "name": "HealthCheck",   // the name should be same as the Class name
+  "defaultValue": "",   // there is no default value in this case 
   "description": "the content of the configuration",
-  // general description
-  "status": "active",
-  // status mus be active
-  "type": "script",
-  // type must be script
+  "status": "active",   // status mus be active
+  "type": "script",   // type must be script
   "body": "<<the script body here>>"
 }
 ```
@@ -66,13 +66,13 @@ POST Configuration/$unload-script
 Content-Type: application/fhir+json
 
 {
-"resourceType": "Parameters",
-"parameter": [
-{
-"name": "name",
-"valueString": "HealthCheck" // the name of the script
-}
-]
+  "resourceType": "Parameters",
+  "parameter": [
+        {
+            "name": "name",
+            "valueString": "HealthCheck" // the name of the script
+        }
+    ]
 }
 ```
 
@@ -83,13 +83,13 @@ POST /Configuration/$load-script
 Content-Type: application/fhir+json
 
 {
-"resourceType": "Parameters",
-"parameter": [
-{
-"name": "name",
-"valueString": "HealthCheck"
-}
-]
+  "resourceType": "Parameters",
+  "parameter": [
+        {
+            "name": "name",
+            "valueString": "HealthCheck"
+        }
+    ]
 }
 ```
 
