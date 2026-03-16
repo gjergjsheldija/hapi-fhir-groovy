@@ -37,7 +37,7 @@ In order to use it the following SearchParameters must be in place :
 {
   "resourceType": "SearchParameter",
   "id": "Configuration-name",
-  "url": "https://fhir.mona.icu/SearchParameter/Configuration-name",
+  "url": "https://fhir.demo/SearchParameter/Configuration-name",
   "name": "Configuration-name",
   "status": "active",
   "code": "name",
@@ -54,7 +54,7 @@ In order to use it the following SearchParameters must be in place :
 {
   "resourceType": "SearchParameter",
   "id": "Configuration-type",
-  "url": "https://fhir.mona.icu/SearchParameter/Configuration-type",
+  "url": "https://fhir.demo/SearchParameter/Configuration-type",
   "name": "Configuration-type",
   "status": "active",
   "code": "type",
@@ -71,7 +71,7 @@ In order to use it the following SearchParameters must be in place :
 {
   "resourceType": "SearchParameter",
   "id": "Configuration-status",
-  "url": "https://fhir.mona.icu/SearchParameter/Configuration-status",
+  "url": "https://fhir.demo/SearchParameter/Configuration-status",
   "name": "Configuration-status",
   "status": "active",
   "code": "status",
