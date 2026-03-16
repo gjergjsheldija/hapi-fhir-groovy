@@ -3,7 +3,11 @@ package ca.uhn.fhir.jpa.starter.cr;
 import org.cqframework.cql.cql2elm.CqlCompilerException;
 import org.cqframework.cql.cql2elm.CqlTranslator;
 import org.cqframework.cql.cql2elm.LibraryBuilder;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
 
+@Configuration
+@ConfigurationProperties(prefix = "hapi.fhir.cr.cql.compiler")
 public class CqlCompilerProperties {
 	private Boolean validate_units = true;
 	private Boolean verify_only = false;
@@ -26,7 +30,6 @@ public class CqlCompilerProperties {
 	private Boolean disable_method_invocation = false;
 	private Boolean require_from_keyword = false;
 	private Boolean disable_default_model_info_load = false;
-
 
 	public boolean isValidateUnits() {
 		return validate_units;

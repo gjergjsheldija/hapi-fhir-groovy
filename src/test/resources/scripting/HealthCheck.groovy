@@ -1,10 +1,10 @@
-package com.clinomic.scripting
+package com.gjergjsheldija.scripting
 
 import ca.uhn.fhir.rest.annotation.Operation
 import ca.uhn.fhir.rest.annotation.OperationParam
 import ca.uhn.fhir.rest.api.MethodOutcome
-import com.clinomic.scripting.api.CustomScript
-import com.clinomic.scripting.api.Provider
+import com.gjergjsheldija.scripting.api.CustomScript
+import com.gjergjsheldija.scripting.api.Provider
 import org.hl7.fhir.r4.model.Parameters
 import org.hl7.fhir.r4.model.StringType
 

@@ -26,7 +26,7 @@ pull-images: ## Pull all images
 .PHONY: pull-images
 
 shell: ## Opens a command prompt in the FHIR server
-	docker compose -p ${APPLICATION_NAME} exec clinomic-fhir-server /bin/bash
+	docker compose -p ${APPLICATION_NAME} exec fhir-server /bin/bash
 .PHONY: shell
 
 watch-logs: ## Open a tail on all the logs
@@ -52,7 +52,7 @@ dev: ## Start the development image
 
 start-databases: ## Start the databases used by the different services
 	# Start all containers
-	docker compose -p ${APPLICATION_NAME} up -d --remove-orphans clinomic-fhir-postgres
+	docker compose -p ${APPLICATION_NAME} up -d --remove-orphans fhir-postgres
 .PHONY: start-databases
 
 start-infinispan: ## Start the caching server
@@ -68,7 +68,7 @@ start-prometheus: ## Start the prometheus
 
 start-server: ## Start the application
 	# Start all containers
-	docker compose -p ${APPLICATION_NAME} up -d --remove-orphans clinomic-fhir-server
+	docker compose -p ${APPLICATION_NAME} up -d --remove-orphans fhir-server
 .PHONY: start-server
 
 start: ## Alias to start

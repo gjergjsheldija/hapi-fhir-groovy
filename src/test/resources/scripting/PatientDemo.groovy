@@ -1,13 +1,13 @@
 /**
  * FHIR Server
  * <p>
- * Copyright (c) 2024, Clinomic GmbH, Aachen
+ * Copyright (c) 2025, Gjergj Sheldija
  * All rights reserved.
  *
- * @author Gjergj Sheldija <gsheldija@clinomic.ai>
- * @copyright 2024, Clinomic GmbH, Aachen
+ * @author Gjergj Sheldija <gjergj@sheldija.net>
+ * @copyright 2025, Gjergj Sheldija
  * @license All rights reserved.
- * @since 2024-08-07
+ * @since 2025-08-07
  */
 
 package scripting
@@ -15,7 +15,7 @@ package scripting
 import ca.uhn.fhir.interceptor.api.Hook
 import ca.uhn.fhir.interceptor.api.Interceptor
 import ca.uhn.fhir.interceptor.api.Pointcut
-import com.clinomic.scripting.api.CustomScript
+import com.gjergjsheldija.scripting.api.CustomScript
 import groovy.util.logging.Slf4j
 
 @Slf4j

@@ -1,5 +1,5 @@
 services:
-  clinomic-fhir-server:
+  fhir-server:
     build:
       context: .
       target: tomcat
@@ -27,9 +27,9 @@ services:
       - /tmp:/tmp
       - ./lucenefiles:/app/target/lucenefiles/
     depends_on:
-      - clinomic-fhir-postgres
+      - fhir-postgres
 
-  clinomic-fhir-postgres:
+  fhir-postgres:
     build: ./config/database
     environment:
       SERVER_NAME: fhir
@@ -43,10 +43,10 @@ services:
       - postgres:/var/lib/postgresql/data/pgdata
 
   karate:
-    entrypoint: '/wait-for-it.sh clinomic-fhir-server:8080/fhir -t 60 -- java -cp "/utils/*" com.intuit.karate.Main'
-    image: www.clinomic.biz:5050/gsheldija/karate-samples:0.0.1
+    entrypoint: '/wait-for-it.sh fhir-server:8080/fhir -t 60 -- java -cp "/utils/*" com.intuit.karate.Main'
+    image: karate-samples:0.0.1
     environment:
-      URL_BASE: 'http://clinomic-fhir-server:8080/fhir'
+      URL_BASE: 'http://fhir-server:8080/fhir'
     volumes:
       - ./tests:/tests
     user: "${UID}:${GID}"
@@ -55,8 +55,8 @@ services:
       - "/tests/integration/auditevent.feature"
       - "/tests/utils.feature"
     depends_on:
-      - clinomic-fhir-postgres
-      - clinomic-fhir-server
+      - fhir-postgres
+      - fhir-server
 
 
 volumes:

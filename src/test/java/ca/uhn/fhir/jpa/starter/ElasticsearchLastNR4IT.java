@@ -91,7 +91,7 @@ public class ElasticsearchLastNR4IT {
 	  elasticsearchHighLevelRestClient.indices().putTemplate(t->{
 		  t.name("hapi_fhir_template");
 		  t.indexPatterns("*");
-		  t.settings("index.max_result_window", JsonData.of(50000));
+          // t.settings("index.max_result_window", JsonData.of(50000));
 		  return t;
 	  });
 

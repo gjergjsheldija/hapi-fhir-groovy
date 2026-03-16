@@ -1,6 +1,6 @@
 # FHIR
 
-## CLINOMIC FHIR server
+## Development FHIR server
 
 To be able to start the project you need to have the following software installed on your machine :
 
@@ -85,7 +85,7 @@ In case of issues with the containers, please run `make stop clean`.
 
 The push of the docker image is done via `make push-image`.
 
-## Clinomic specific
+## Specific
 
-Clinomic specific customizations can be found in the `doc` directory.
+Specific customizations can be found in the `doc` directory.
 

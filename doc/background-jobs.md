@@ -64,10 +64,10 @@ class and `@Scheduled` for the main method. The following properties are support
 Job example :
 
 ```groovy
-package com.clinomic.jobs;
+package com.gjergjsheldija.jobs;
 
 
-import com.clinomic.scripting.api.CustomScript
+import com.gjergjsheldija.scripting.api.CustomScript
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.annotation.Scheduled
 

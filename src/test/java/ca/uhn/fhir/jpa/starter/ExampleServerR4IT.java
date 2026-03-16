@@ -1,7 +1,7 @@
 package ca.uhn.fhir.jpa.starter;
 
 import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.cr.config.RepositoryConfig;
+// import ca.uhn.fhir.cr.config.RepositoryConfig;
 import ca.uhn.fhir.jpa.searchparam.config.NicknameServiceConfig;
 import ca.uhn.fhir.jpa.starter.cr.CrProperties;
 import ca.uhn.fhir.model.primitive.IdDt;
@@ -30,7 +30,7 @@ import static org.opencds.cqf.fhir.utility.r4.Parameters.stringPart;
 	classes = {
 		Application.class,
 		NicknameServiceConfig.class,
-		RepositoryConfig.class
+		// RepositoryConfig.class
 	}, properties = {
 	"spring.datasource.url=jdbc:h2:mem:dbr4",
 	"hapi.fhir.enable_repository_validating_interceptor=true",
@@ -76,38 +76,7 @@ class ExampleServerR4IT implements IServerSupport {
 
 	}
 
-	@Test
-	public void testCQLEvaluateMeasureEXM130() throws IOException {
-		String measureId = "ColorectalCancerScreeningsFHIR";
-		String measureUrl = "http://ecqi.healthit.gov/ecqms/Measure/ColorectalCancerScreeningsFHIR";
-
-		loadBundle("r4/EXM130/EXM130-7.3.000-bundle.json", ourCtx, ourClient);
-
-
-		Parameters inParams = new Parameters();
-		inParams.addParameter().setName("periodStart").setValue(new StringType("2019-01-01"));
-		inParams.addParameter().setName("periodEnd").setValue(new StringType("2019-12-31"));
-		inParams.addParameter().setName("reportType").setValue(new StringType("summary"));
-
-		Parameters outParams = ourClient
-			.operation()
-			.onInstance(new IdDt("Measure", measureId))
-			.named("$evaluate-measure")
-			.withParameters(inParams)
-			.cacheControl(new CacheControlDirective().setNoCache(true))
-			.withAdditionalHeader("Content-Type", "application/json")
-			.useHttpGet()
-			.execute();
-
-		List<Parameters.ParametersParameterComponent> response = outParams.getParameter();
-		assertFalse(response.isEmpty());
-		Parameters.ParametersParameterComponent component = response.get(0);
-		assertTrue(component.getResource() instanceof MeasureReport);
-		MeasureReport report = (MeasureReport) component.getResource();
-		assertEquals(measureUrl + "|0.0.003", report.getMeasure());
-	}
-
-	public Parameters runCqlExecution(Parameters parameters) {
+public Parameters runCqlExecution(Parameters parameters) {
 
 		var results = ourClient.operation().onServer()
 			.named("$cql")

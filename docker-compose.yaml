@@ -1,5 +1,5 @@
 services:
-  clinomic-fhir-server:
+  fhir-server:
     build:
       context: .
       target: tomcat
@@ -13,9 +13,9 @@ services:
       - ./lucenefiles:/app/target/lucenefiles/
       - ./src/main/resources/logback.xml:/logbackconfig/logback.xml    # See also catalina.properties/logging.config. Now, when running on local docker, changes to logback.xml will be reloaded automatically.
     depends_on:
-      - clinomic-fhir-postgres
+      - fhir-postgres
 
-  clinomic-fhir-postgres:
+  fhir-postgres:
     build: ./config/database
     environment:
       SERVER_NAME: fhir
@@ -29,10 +29,10 @@ services:
       - postgres:/var/lib/postgresql/data/pgdata
 
   karate:
-    entrypoint: '/wait-for-it.sh clinomic-fhir-server:8080/fhir -t 60 -- java -cp "/utils/*" com.intuit.karate.Main'
-    image: www.clinomic.biz:5050/mona/karate:0.0.1
+    entrypoint: '/wait-for-it.sh fhir-server:8080/fhir -t 60 -- java -cp "/utils/*" com.intuit.karate.Main'
+    image: karate:0.0.1
     environment:
-      URL_BASE: 'http://clinomic-fhir-server:8080/fhir'
+      URL_BASE: 'http://fhir-server:8080/fhir'
     volumes:
       - ./tests:/tests
     user: "${UID}:${GID}"
@@ -43,8 +43,8 @@ services:
       - "/tests/integration/terminology.feature"
       - "/tests/utils.feature"
     depends_on:
-      - clinomic-fhir-postgres
-      - clinomic-fhir-server
+      - fhir-postgres
+      - fhir-server
 
   grafana:
     image: grafana/grafana
@@ -78,7 +78,7 @@ services:
       - --storage.tsdb.retention.time=30d
     restart: unless-stopped
     depends_on:
-      - clinomic-fhir-server
+      - fhir-server
     ports:
       - 9090:9090
 
@@ -97,3 +97,7 @@ services:
 volumes:
   postgres:
     driver: local
+
+networks:
+  monalake:
+  default:
