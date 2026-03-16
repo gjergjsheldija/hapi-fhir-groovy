@@ -1,0 +1,58 @@
+<configuration scan="true" scanPeriod="30 seconds">
+
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
+            <providers>
+                <timestamp>
+                    <fieldName>time</fieldName>
+                </timestamp>
+                <logLevel>
+                    <fieldName>level</fieldName>
+                </logLevel>
+                <threadName>
+                    <fieldName>thread</fieldName>
+                </threadName>
+                <loggerName>
+                    <fieldName>logger</fieldName>
+                </loggerName>
+                <message>
+                    <fieldName>message</fieldName>
+                </message>
+                <stackTrace>
+                    <fieldName>stacktrace</fieldName>
+                </stackTrace>
+                <context>
+                    <fieldName>context</fieldName>
+                </context>
+                <!-- Add MDC fields if any -->
+                <mdc>
+                    <mdcKey fieldName="uri">uri</mdcKey>
+                    <mdcKey fieldName="method">method</mdcKey>
+                    <mdcKey fieldName="remote_ip">remote_ip</mdcKey>
+                    <mdcKey fieldName="request_id">request_id</mdcKey>
+                    <mdcKey fieldName="host">host</mdcKey>
+                    <mdcKey fieldName="user_agent">user_agent</mdcKey>
+                    <mdcKey fieldName="status">status</mdcKey>
+                    <mdcKey fieldName="bytes_in">bytes_in</mdcKey>
+                    <mdcKey fieldName="bytes_out">bytes_out</mdcKey>
+                    <mdcKey fieldName="latency">latency</mdcKey>
+                    <mdcKey fieldName="latency_human">latency_human</mdcKey>
+                    <mdcKey fieldName="client_id">client_id</mdcKey>
+                    <mdcKey fieldName="tenant_id">tenant_id</mdcKey>
+                    <mdcKey fieldName="compartment">compartment</mdcKey>
+                    <mdcKey fieldName="message_source">message_source</mdcKey>
+                    <mdcKey fieldName="operation_type">operation_type</mdcKey>
+                    <mdcKey fieldName="operation_name">operation_name</mdcKey>
+                    <mdcKey fieldName="id_resource_name">id_resource_name</mdcKey>
+                    <mdcKey fieldName="request_parameters">request_parameters</mdcKey>
+                    <mdcKey fieldName="request_body">request_body</mdcKey>
+                </mdc>
+            </providers>
+        </encoder>
+    </appender>
+
+    <root level="info">
+        <appender-ref ref="stdout"/>
+    </root>
+
+</configuration>

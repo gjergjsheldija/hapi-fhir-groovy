@@ -1,0 +1,86 @@
+{
+  "resourceType": "Bundle",
+  "type": "collection",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs1",
+        "status": "final",
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "251840008",
+              "display": "Current Output"
+            }
+          ]
+        },
+        "subject": {
+          "reference": "Patient/example"
+        },
+        "encounter": {
+          "reference": "Encounter/test-encounter-id"
+        },
+        "effectiveDateTime": "2025-07-24T01:30:00Z",
+        "valueQuantity": {
+          "value": 100,
+          "unit": "ml",
+          "system": "http://unitsofmeasure.org",
+          "code": "ml"
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "https://fhir.demo/CodeSystem/mona-observation-category",
+                "code": "output",
+                "display": "Output"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs2",
+        "status": "final",
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "251840008",
+              "display": "Current Output"
+            }
+          ]
+        },
+        "subject": {
+          "reference": "Patient/example"
+        },
+        "encounter": {
+          "reference": "Encounter/test-encounter-id"
+        },
+        "effectiveDateTime": "2025-07-24T02:30:00Z",
+        "valueQuantity": {
+          "value": 150,
+          "unit": "ml",
+          "system": "http://unitsofmeasure.org",
+          "code": "ml"
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "https://fhir.demo/CodeSystem/mona-observation-category",
+                "code": "output",
+                "display": "Output"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

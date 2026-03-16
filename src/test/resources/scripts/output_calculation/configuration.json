@@ -1,0 +1,6 @@
+{
+  "resourceType": "Configuration",
+  "id": "reset-time-config",
+  "name": "resetTime",
+  "body": "08:00:00"
+}
