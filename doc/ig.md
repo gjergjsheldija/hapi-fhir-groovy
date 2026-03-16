@@ -34,7 +34,7 @@ Change the `application.yaml` file to include the following, being aware of the 
         reloadExisting: false
         installMode: STORE_AND_INSTALL
         version: x.y.z
-        packageUrl: 'http://mona.pg.clinomic.icu/mona-3-ig/x.y.z/fhir.mona.icu.x.y.z.tgz '
+        packageUrl: 'http://demo.com/fhir.demo.x.y.z.tgz '
 ```
 
 ### Dynamic installation of IG's

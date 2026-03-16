@@ -19,7 +19,7 @@ By default, the AuditEvent is disabled, in order to enable it, the entry `hapi.f
   "id": "2",
   "meta": {
     "versionId": "1",
-    "lastUpdated": "2024-06-14T11:41:13.866+02:00",
+    "lastUpdated": "2025-06-14T11:41:13.866+02:00",
     "profile": [
       "https://profiles.ihe.net/ITI/BALP/StructureDefinition/IHE.BasicAudit.PatientCreate"
     ]
@@ -37,7 +37,7 @@ By default, the AuditEvent is disabled, in order to enable it, the entry `hapi.f
     }
   ],
   "action": "C",
-  "recorded": "2024-06-14T11:41:13.865+02:00",
+  "recorded": "2025-06-14T11:41:13.865+02:00",
   "outcome": "0",
   "agent": [
     {

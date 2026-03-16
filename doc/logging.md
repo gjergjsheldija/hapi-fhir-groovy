@@ -7,10 +7,10 @@ The structure of the log file is as below :
 
 ```json
 {
-  "time": "2024-07-02T11:44:02.761+02:00",
+  "time": "2025-07-02T11:44:02.761+02:00",
   "level": "INFO",
   "thread": "http-nio-auto-1-exec-1",
-  "logger": "com.clinomic.logging.LoggingService",
+  "logger": "com.gjergjsheldija.logging.LoggingService",
   "message": "{\"operationType\":\"read\",\"operationName\":\"\",\"idOrResourceName\":\"Patient/1\",\"requestParameters\":null,\"requestBodyFhir\":\"\"}",
   "context": {},
   "id_resource_name": "Patient/1",

@@ -14,6 +14,6 @@ The following should be
 ```yaml
     security:
       enabled: ${SECURITY_ENABLED:false}
-      server: ${SECURITY_SERVER:http://localhost:8181/realms/clinomic}
-      jwks: ${SECURITY_JWKS:http://localhost:8181/realms/clinomic/protocol/openid-connect/certs}
+      server: ${SECURITY_SERVER:http://localhost:8181/realms/demo}
+      jwks: ${SECURITY_JWKS:http://localhost:8181/realms/demo/protocol/openid-connect/certs}
 ```

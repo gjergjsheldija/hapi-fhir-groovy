@@ -1,0 +1,46 @@
+/**
+ * FHIR Server
+ * <p>
+ * Copyright (c) 2025, Gjergj Sheldija
+ * All rights reserved.
+ *
+ * @author Gjergj Sheldija <gjergj@sheldija.net>
+ * @copyright 2025, Gjergj Sheldija
+ * @license All rights reserved.
+ * @since 2025-09-16
+ */
+
+package com.gjergjsheldija.cache;
+
+import java.util.Arrays;
+import java.util.List;
+
+public enum HotrodProtocolVersionEnum {
+	PROTOCOL_VERSION_10,
+	PROTOCOL_VERSION_11,
+	PROTOCOL_VERSION_12,
+	PROTOCOL_VERSION_13,
+	PROTOCOL_VERSION_20,
+	PROTOCOL_VERSION_21,
+	PROTOCOL_VERSION_22,
+	PROTOCOL_VERSION_23,
+	PROTOCOL_VERSION_24,
+	PROTOCOL_VERSION_25,
+	PROTOCOL_VERSION_26,
+	PROTOCOL_VERSION_27,
+	PROTOCOL_VERSION_28,
+	PROTOCOL_VERSION_29,
+	PROTOCOL_VERSION_30,
+	PROTOCOL_VERSION_31,
+	PROTOCOL_VERSION_40,
+	PROTOCOL_VERSION_AUTO;
+
+	public static List getDeprecatedVersions() {
+		return Arrays.asList(PROTOCOL_VERSION_10, PROTOCOL_VERSION_11, PROTOCOL_VERSION_12, PROTOCOL_VERSION_13);
+	}
+
+	// $FF: synthetic method
+	private static HotrodProtocolVersionEnum[] $values() {
+		return new HotrodProtocolVersionEnum[]{PROTOCOL_VERSION_10, PROTOCOL_VERSION_11, PROTOCOL_VERSION_12, PROTOCOL_VERSION_13, PROTOCOL_VERSION_20, PROTOCOL_VERSION_21, PROTOCOL_VERSION_22, PROTOCOL_VERSION_23, PROTOCOL_VERSION_24, PROTOCOL_VERSION_25, PROTOCOL_VERSION_26, PROTOCOL_VERSION_27, PROTOCOL_VERSION_28, PROTOCOL_VERSION_29, PROTOCOL_VERSION_30, PROTOCOL_VERSION_31, PROTOCOL_VERSION_40, PROTOCOL_VERSION_AUTO};
+	}
+}

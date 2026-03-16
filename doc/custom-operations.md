@@ -94,10 +94,10 @@ paths:
                   "valueString": "http://loinc.org|8867-4"
                 }, {
                   "name": "startDateTime",
-                  "valueString": "2024-07-24T05:00"
+                  "valueString": "2025-07-24T05:00"
                 }, {
                   "name": "endDateTime",
-                  "valueString": "2024-07-24T10:00"
+                  "valueString": "2025-07-24T10:00"
                 }, {
                   "name": "interval",
                   "valueString": "3600"

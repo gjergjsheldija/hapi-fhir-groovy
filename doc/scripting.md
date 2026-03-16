@@ -37,7 +37,7 @@ package scripting
 import ca.uhn.fhir.interceptor.api.Hook
 import ca.uhn.fhir.interceptor.api.Interceptor
 import ca.uhn.fhir.interceptor.api.Pointcut
-import com.clinomic.scripting.api.CustomScript
+import com.gjergjsheldija.scripting.api.CustomScript
 import groovy.util.logging.Slf4j
 
 @Slf4j
@@ -108,7 +108,7 @@ Scripts can be of two types Interceptors and Providers, that also is done via an
 | type        | annotation     | library                                          |
 |-------------|----------------|--------------------------------------------------|
 | Interceptor | `@Interceptor` | `import ca.uhn.fhir.interceptor.api.Interceptor` |
-| Provider    | `@Provider`    | `import com.clinomic.scripting.api.Provider`     |
+| Provider    | `@Provider`    | `import com.gjergjsheldija.scripting.api.Provider`     |
 
 ### Provider
 
@@ -118,12 +118,12 @@ The endpoint returns a `Parameters` with the value of the incoming data.
 As noted above the Interceptor script uses two annotations `@Provider` and `@CustomScript`.
 
 ```groovy
-package com.clinomic.scripting
+package com.gjergjsheldija.scripting
 
 import ca.uhn.fhir.rest.annotation.Operation
 import ca.uhn.fhir.rest.annotation.OperationParam
-import com.clinomic.scripting.api.CustomScript
-import com.clinomic.scripting.api.Provider
+import com.gjergjsheldija.scripting.api.CustomScript
+import com.gjergjsheldija.scripting.api.Provider
 import org.hl7.fhir.r4.model.Parameters
 import org.hl7.fhir.r4.model.StringType
 
@@ -153,12 +153,12 @@ resource is of type `Patient` and in case it is, it logs to the standard server 
 As noted above the Interceptor script uses two annotations `@Interceptor` and `@CustomScript`.
 
 ```groovy
-package com.clinomic.scripting
+package com.gjergjsheldija.scripting
 
 import ca.uhn.fhir.interceptor.api.Hook
 import ca.uhn.fhir.interceptor.api.Interceptor
 import ca.uhn.fhir.interceptor.api.Pointcut
-import com.clinomic.scripting.api.CustomScript
+import com.gjergjsheldija.scripting.api.CustomScript
 import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
 

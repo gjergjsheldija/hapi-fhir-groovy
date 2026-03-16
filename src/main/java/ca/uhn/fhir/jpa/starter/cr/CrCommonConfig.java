@@ -1,8 +1,5 @@
 package ca.uhn.fhir.jpa.starter.cr;
 
-import ca.uhn.fhir.cr.common.CodeCacheResourceChangeListener;
-import ca.uhn.fhir.cr.common.CqlThreadFactory;
-import ca.uhn.fhir.cr.common.ElmCacheResourceChangeListener;
 import ca.uhn.fhir.jpa.api.dao.DaoRegistry;
 import ca.uhn.fhir.jpa.cache.IResourceChangeListenerRegistry;
 import ca.uhn.fhir.jpa.cache.ResourceChangeListenerRegistryInterceptor;
@@ -19,10 +16,13 @@ import org.opencds.cqf.cql.engine.runtime.Code;
 import org.opencds.cqf.fhir.cql.EvaluationSettings;
 import org.opencds.cqf.fhir.cql.engine.retrieve.RetrieveSettings;
 import org.opencds.cqf.fhir.cql.engine.terminology.TerminologySettings;
+import org.opencds.cqf.fhir.cr.hapi.common.CodeCacheResourceChangeListener;
+import org.opencds.cqf.fhir.cr.hapi.common.CqlThreadFactory;
+import org.opencds.cqf.fhir.cr.hapi.common.ElmCacheResourceChangeListener;
 import org.opencds.cqf.fhir.cr.measure.CareGapsProperties;
 import org.opencds.cqf.fhir.cr.measure.MeasureEvaluationOptions;
 import org.opencds.cqf.fhir.utility.ValidationProfile;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.opencds.cqf.fhir.utility.client.TerminologyServerClientSettings;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
@@ -42,35 +42,35 @@ import java.util.concurrent.Executors;
 public class CrCommonConfig {
 
 	@Bean
-	@ConfigurationProperties(prefix = "hapi.fhir.cr")
-	CrProperties crProperties() {
-		return new CrProperties();
+	RetrieveSettings retrieveSettings(CqlData cqlData) {
+		return cqlData.getRetrieveSettings();
 	}
 
 	@Bean
-	RetrieveSettings retrieveSettings(CrProperties theCrProperties) {
-		return theCrProperties.getCql().getData();
+	TerminologySettings terminologySettings(CqlTerminologyProperties theCqlTerminologyProperties) {
+		return theCqlTerminologyProperties.getTerminologySettings();
 	}
 
 	@Bean
-	TerminologySettings terminologySettings(CrProperties theCrProperties) {
-		return theCrProperties.getCql().getTerminology();
+	TerminologyServerClientSettings terminologyServerClientSettings(CrProperties theCrProperties) {
+		return theCrProperties.getTerminologyServerClientSettings();
 	}
 
 	@Bean
 	public EvaluationSettings evaluationSettings(
-		CrProperties theCrProperties,
-		RetrieveSettings theRetrieveSettings,
-		TerminologySettings theTerminologySettings,
-		Map<VersionedIdentifier, CompiledLibrary> theGlobalLibraryCache,
-		Map<ModelIdentifier, Model> theGlobalModelCache,
-		Map<String, List<Code>> theGlobalValueSetCache) {
+			CqlRuntimeProperties cqlRuntimeProperties,
+			CqlCompilerProperties cqlCompilerProperties,
+			RetrieveSettings theRetrieveSettings,
+			TerminologySettings theTerminologySettings,
+			Map<VersionedIdentifier, CompiledLibrary> theGlobalLibraryCache,
+			Map<ModelIdentifier, Model> theGlobalModelCache,
+			Map<String, List<Code>> theGlobalValueSetCache) {
 		var evaluationSettings = EvaluationSettings.getDefault();
 		var cqlOptions = evaluationSettings.getCqlOptions();
 
 		var cqlEngineOptions = cqlOptions.getCqlEngineOptions();
 		Set<CqlEngine.Options> options = EnumSet.noneOf(CqlEngine.Options.class);
-		var cqlRuntimeProperties = theCrProperties.getCql().getRuntime();
+
 		if (cqlRuntimeProperties.isEnableExpressionCaching()) {
 			options.add(CqlEngine.Options.EnableExpressionCaching);
 		}
@@ -84,8 +84,6 @@ public class CrCommonConfig {
 		cqlOptions.setCqlEngineOptions(cqlEngineOptions);
 
 		var cqlCompilerOptions = new CqlCompilerOptions();
-
-		var cqlCompilerProperties = theCrProperties.getCql().getCompiler();
 
 		if (cqlCompilerProperties.isEnableDateRangeOptimization()) {
 			cqlCompilerOptions.setOptions(CqlCompilerOptions.Options.EnableDateRangeOptimization);
@@ -153,17 +151,21 @@ public class CrCommonConfig {
 		return executor;
 	}
 
-	@Bean
-	CareGapsProperties careGapsProperties(CrProperties theCrProperties) {
+	@Bean(name = "measure.CareGapsProperties")
+	org.opencds.cqf.fhir.cr.measure.CareGapsProperties careGapsProperties(CrProperties theCrProperties) {
 		var careGapsProperties = new CareGapsProperties();
-		careGapsProperties.setCareGapsReporter(theCrProperties.getCareGaps().getReporter());
-		careGapsProperties.setCareGapsCompositionSectionAuthor(theCrProperties.getCareGaps().getSection_author());
+		// This check for the resource type really should be happening down in CR where the setting is actually used but
+		// that will have to wait for a future CR release
+		careGapsProperties.setCareGapsReporter(
+				theCrProperties.getCareGaps().getReporter().replace("Organization/", ""));
+		careGapsProperties.setCareGapsCompositionSectionAuthor(
+				theCrProperties.getCareGaps().getSection_author().replace("Organization/", ""));
 		return careGapsProperties;
 	}
 
 	@Bean
 	MeasureEvaluationOptions measureEvaluationOptions(
-		EvaluationSettings theEvaluationSettings, Map<String, ValidationProfile> theValidationProfiles) {
+			EvaluationSettings theEvaluationSettings, Map<String, ValidationProfile> theValidationProfiles) {
 		MeasureEvaluationOptions measureEvalOptions = new MeasureEvaluationOptions();
 		measureEvalOptions.setEvaluationSettings(theEvaluationSettings);
 		if (measureEvalOptions.isValidationEnabled()) {
@@ -174,7 +176,7 @@ public class CrCommonConfig {
 
 	@Bean
 	public PostInitProviderRegisterer postInitProviderRegisterer(
-		RestfulServer theRestfulServer, ResourceProviderFactory theResourceProviderFactory) {
+			RestfulServer theRestfulServer, ResourceProviderFactory theResourceProviderFactory) {
 		return new PostInitProviderRegisterer(theRestfulServer, theResourceProviderFactory);
 	}
 
@@ -195,27 +197,27 @@ public class CrCommonConfig {
 
 	@Bean
 	public ElmCacheResourceChangeListener elmCacheResourceChangeListener(
-		IResourceChangeListenerRegistry theResourceChangeListenerRegistry,
-		DaoRegistry theDaoRegistry,
-		EvaluationSettings theEvaluationSettings) {
+			IResourceChangeListenerRegistry theResourceChangeListenerRegistry,
+			DaoRegistry theDaoRegistry,
+			EvaluationSettings theEvaluationSettings) {
 		ElmCacheResourceChangeListener listener =
-			new ElmCacheResourceChangeListener(theDaoRegistry, theEvaluationSettings.getLibraryCache());
+				new ElmCacheResourceChangeListener(theDaoRegistry, theEvaluationSettings.getLibraryCache());
 		theResourceChangeListenerRegistry.registerResourceResourceChangeListener(
-			"Library", SearchParameterMap.newSynchronous(), listener, 1000);
+				"Library", SearchParameterMap.newSynchronous(), listener, 1000);
 		return listener;
 	}
 
 	@Bean
 	public CodeCacheResourceChangeListener codeCacheResourceChangeListener(
-		IResourceChangeListenerRegistry theResourceChangeListenerRegistry,
-		EvaluationSettings theEvaluationSettings,
-		DaoRegistry theDaoRegistry) {
+			IResourceChangeListenerRegistry theResourceChangeListenerRegistry,
+			EvaluationSettings theEvaluationSettings,
+			DaoRegistry theDaoRegistry) {
 
 		CodeCacheResourceChangeListener listener =
-			new CodeCacheResourceChangeListener(theDaoRegistry, theEvaluationSettings.getValueSetCache());
+				new CodeCacheResourceChangeListener(theDaoRegistry, theEvaluationSettings.getValueSetCache());
 		// registry
 		theResourceChangeListenerRegistry.registerResourceResourceChangeListener(
-			"ValueSet", SearchParameterMap.newSynchronous(), listener, 1000);
+				"ValueSet", SearchParameterMap.newSynchronous(), listener, 1000);
 
 		return listener;
 	}
