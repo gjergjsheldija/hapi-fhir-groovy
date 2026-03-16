@@ -24,7 +24,7 @@ import org.hl7.fhir.utilities.Utilities;
 
 import java.util.List;
 
-@ResourceDef(name = "Configuration", profile = "http://fhir.mona.icu/StructureDefinition/Configuration", id = "Configuration")
+@ResourceDef(name = "Configuration", profile = "http://fhir.demo/StructureDefinition/Configuration", id = "Configuration")
 public class Configuration extends DomainResource implements IBaseResource {
 
 	public enum ConfigurationStatus {
