@@ -1,0 +1,111 @@
+{
+  "resourceType": "Bundle",
+  "type": "collection",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "6b1e2217-800d-47e2-a478-af1bffe510c6",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "https://fhir.demo/CodeSystem/mona-observation-category",
+                "code": "output",
+                "display": "Output"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "251840008",
+              "display": "Current Output"
+            }
+          ]
+        },
+        "encounter": {
+          "reference": "test-encounter-id"
+        },
+        "effectiveDateTime": "2025-07-24T01:00:00Z",
+        "valueQuantity": {
+          "value": 100.0,
+          "unit": "ml"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "b5f6d8cf-8c45-4d21-9b46-ba71e6b8d3c8",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "https://fhir.demo/CodeSystem/mona-observation-category",
+                "code": "output",
+                "display": "Output"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "251840008",
+              "display": "Current Output"
+            }
+          ]
+        },
+        "encounter": {
+          "reference": "test-encounter-id"
+        },
+        "effectiveDateTime": "2025-07-24T02:00:00Z",
+        "valueQuantity": {
+          "value": 250.0,
+          "unit": "ml"
+        }
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "id": "cc7f9e9c-32a1-4de3-a6f8-a8df99d8cfa3",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "https://fhir.demo/CodeSystem/mona-observation-category",
+                "code": "output",
+                "display": "Output"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://snomed.info/sct",
+              "code": "251840008",
+              "display": "Current Output"
+            }
+          ]
+        },
+        "encounter": {
+          "reference": "test-encounter-id"
+        },
+        "effectiveDateTime": "2025-07-24T03:00:00Z",
+        "valueQuantity": {
+          "value": 250.0,
+          "unit": "ml"
+        }
+      }
+    }
+  ]
+}
