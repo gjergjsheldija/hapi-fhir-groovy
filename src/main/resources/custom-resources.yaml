@@ -1,0 +1,10 @@
+resources:
+  - name: "CustomResource"
+    profile: "http://fhir.demo/StructureDefinition/CustomResource"
+    fields:
+      - name: "title"
+        type: "string"
+        short: "The title of the resource"
+      - name: "content"
+        type: "string"
+        short: "The content of the resource"
