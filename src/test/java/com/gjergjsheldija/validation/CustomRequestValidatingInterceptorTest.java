@@ -24,6 +24,8 @@ import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class CustomRequestValidatingInterceptorTest {
@@ -56,5 +58,16 @@ class CustomRequestValidatingInterceptorTest {
 			httpServletResponse);
 
 		assertTrue(result, "Validation should be skipped for Configuration resource");
+	}
+
+	@Test
+	void skipsValidationForApp() throws AuthenticationException {
+		when(requestDetails.getResourceName()).thenReturn("App");
+
+		boolean result = interceptor.incomingRequestPostProcessed(requestDetails, httpServletRequest,
+			httpServletResponse);
+
+		assertTrue(result, "Validation should be skipped for App resource");
+		verify(requestDetails, never()).loadRequestContents();
 	}
 }
