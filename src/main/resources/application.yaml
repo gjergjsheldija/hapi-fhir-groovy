@@ -104,10 +104,10 @@ spring:
 
   datasource:
     # url: "jdbc:h2:file:./target/database/h2"
-    url: jdbc:h2:mem:test_mem
-    username: sa
-    password: null
-    driver-class-name: org.h2.Driver
+    url: ${SQL_URL:jdbc:h2:mem:test_mem}
+    username: ${SQL_USERNAME:sa}
+    password: ${SQL_PASSWORD:}
+    driver-class-name: ${SQL_DRIVER:org.h2.Driver}
     # max-active: 15     # (ignored with HikariCP; use hikari.maximum-pool-size)
     hikari:
       maximum-pool-size: 10
@@ -120,7 +120,7 @@ spring:
         # Hibernate dialect is auto-detected except for H2/Postgres.
         # If using H2:     ca.uhn.fhir.jpa.model.dialect.HapiFhirH2Dialect
         # If using Postgres: ca.uhn.fhir.jpa.model.dialect.HapiFhirPostgresDialect
-        dialect: ca.uhn.fhir.jpa.model.dialect.HapiFhirH2Dialect
+        dialect: ${SQL_DIALECT:ca.uhn.fhir.jpa.model.dialect.HapiFhirH2Dialect}
 
         # --- Optional Hibernate DDL & tuning (commented out from source) ---
         hbm2ddl:
@@ -215,7 +215,7 @@ hapi:
     # C. Clinical Reasoning / CQL / Care Gaps / CDS Hooks
     # -------------------------------------------------------------------------------
     cr:
-      enabled: false                            # exposes Clinical Reasoning operation endpoints
+      enabled: ${CLINICAL_RESEARCH_ENABLED:false}   # exposes Clinical Reasoning operation endpoints
       caregaps:
         reporter: "default"
         section_author: "default"
@@ -394,9 +394,40 @@ hapi:
     # -------------------------------------------------------------------------------
     # comma-separated package names, will be @ComponentScan'ed by Spring to allow for creating custom Spring beans
 
-    # custom-bean-packages:
-    # custom-interceptor-classes:
-    # custom-provider-classes:
+    custom-bean-packages: ca.uhn.fhir.jpa.starter, com.gjergjsheldija
+
+    # classes listed here will be fetched from the Spring context when combined with 'custom-bean-packages',
+    # or will be instantiated via reflection using an no-arg constructor; then registered with the server
+    custom-interceptor-classes:
+      - com.gjergjsheldija.logging.CustomLoggingInterceptor
+      - ca.uhn.fhir.jpa.subscription.util.SubscriptionDebugLogInterceptor
+      - com.gjergjsheldija.auditevent.AuditEventInterceptor
+      - com.gjergjsheldija.security.SecurityInterceptor
+      - com.gjergjsheldija.terminology.TerminologyCapabilityInterceptor
+      - com.gjergjsheldija.validation.CustomRequestValidatingInterceptor
+
+    custom-provider-classes:
+      - com.gjergjsheldija.scripting.ScriptingProvider
+
+    # -------------------------------------------------------------------------------
+    # Z. Extensions (com.gjergjsheldija) — values come from .env in docker-compose
+    # -------------------------------------------------------------------------------
+    validation:
+      requests_enabled: ${REQUEST_VALIDATION:false}
+      responses_enabled: ${RESPONSE_VALIDATION:false}
+    subscription:
+      resthook_enabled: ${SUBSCRIPTION_REST_ENABLED:false}
+      websocket_enabled: ${SUBSCRIPTION_WEBSOCKET_ENABLED:false}
+    cache_type: ${CACHE_TYPE:DATABASE}                                            # INFINISPAN (case-insensitive) stores search results in Infinispan
+    retain_cached_searches_mins: ${RETAIN_CACHED_SEARCHES_MINS:0}
+    reuse_cached_search_results_millis: ${REUSE_CACHED_SEARCH_RESULTS_MILLIS:0}   # 0 turns off search result reuse
+    audit_event: ${AUDIT_EVENT:false}
+    log_request_body: ${LOG_REQUEST_BODY:false}
+    dao-scheduling-enabled: ${JOB_SCHEDULING:true}
+    security:
+      enabled: ${SECURITY_ENABLED:false}
+      server: ${SECURITY_SERVER:http://localhost:8181/realms/clinomic}
+      jwks: ${SECURITY_JWKS:http://localhost:8181/realms/clinomic/protocol/openid-connect/certs}
     
     # store_meta_source_information: NONE
     # bundle_batch_pool_size: 10
@@ -479,3 +510,13 @@ hapi:
         server_address: 'http://localhost:8080/fhir'
         refuse_to_fetch_third_party_urls: false
         fhir_version: R4
+
+searchcache:
+  infinispan:
+    create.cache: ${INFINISPAN_CREATE_CACHE:false}
+    cache.name: ${INFINISPAN_CACHE_NAME:SearchResultsCache}
+    servers: ${INFINISPAN_ADDRESS:127.0.0.1}:${INFINISPAN_PORT:11222}
+    protocol_version: PROTOCOL_VERSION_23
+    enable_security: ${INFINISPAN_SECURITY_ENABLED:false}
+    username: ${INFINISPAN_USER:admin}
+    password: ${INFINISPAN_PASSWORD:password}
