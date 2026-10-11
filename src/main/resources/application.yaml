@@ -518,5 +518,5 @@ searchcache:
     servers: ${INFINISPAN_ADDRESS:127.0.0.1}:${INFINISPAN_PORT:11222}
     protocol_version: PROTOCOL_VERSION_23
     enable_security: ${INFINISPAN_SECURITY_ENABLED:false}
-    username: ${INFINISPAN_USER:admin}
-    password: ${INFINISPAN_PASSWORD:password}
+    username: ${INFINISPAN_USER:}
+    password: ${INFINISPAN_PASSWORD:}
