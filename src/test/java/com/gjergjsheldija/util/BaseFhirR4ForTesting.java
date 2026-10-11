@@ -30,7 +30,9 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 	classes = {Application.class},
 	properties = {
 		"hapi.fhir.custom-interceptor-classes=com.gjergjsheldija.logging.CustomLoggingInterceptor",
-		"hapi.fhir.custom-bean-packages=com.gjergjsheldija.configuration,com.gjergjsheldija.logging,com.gjergjsheldija.scripting",
+		"hapi.fhir.custom-bean-packages=com.gjergjsheldija.configuration,com.gjergjsheldija.logging,com.gjergjsheldija.scripting,com.gjergjsheldija.app",
+		"hapi.fhir.apps.refresh-ms=3600000",
+		"hapi.fhir.apps.request-timeout-ms=2000",
 		"spring.datasource.url=jdbc:h2:mem:dbr4",
 		"hapi.fhir.enable_repository_validating_interceptor=false",
 		"hapi.fhir.fhir_version=r4",
