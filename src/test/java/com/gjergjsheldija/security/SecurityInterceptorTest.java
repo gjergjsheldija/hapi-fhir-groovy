@@ -16,6 +16,7 @@ import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.interceptor.auth.IAuthRule;
 import ca.uhn.fhir.rest.server.servlet.ServletRequestDetails;
 import com.gjergjsheldija.security.token.AccessTokenValidation;
+import nl.altindag.log.LogCaptor;
 import org.apache.http.HttpHeaders;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -53,6 +55,24 @@ class SecurityInterceptorTest {
 	@BeforeEach
 	void setUp() {
 		MockitoAnnotations.openMocks(this);
+	}
+
+	@Test
+	void warnIfSecurityDisabled_warnsWhenDisabled() {
+		ReflectionTestUtils.setField(securityInterceptor, "securityEnabled", false);
+		try (LogCaptor logCaptor = LogCaptor.forClass(SecurityInterceptor.class)) {
+			securityInterceptor.warnIfSecurityDisabled();
+			assertTrue(logCaptor.getWarnLogs().stream().anyMatch(m -> m.contains("JWT security is DISABLED")));
+		}
+	}
+
+	@Test
+	void warnIfSecurityDisabled_silentWhenEnabled() {
+		ReflectionTestUtils.setField(securityInterceptor, "securityEnabled", true);
+		try (LogCaptor logCaptor = LogCaptor.forClass(SecurityInterceptor.class)) {
+			securityInterceptor.warnIfSecurityDisabled();
+			assertTrue(logCaptor.getWarnLogs().isEmpty());
+		}
 	}
 
 	@Test

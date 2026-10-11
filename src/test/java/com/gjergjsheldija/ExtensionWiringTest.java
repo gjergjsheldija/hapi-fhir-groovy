@@ -27,7 +27,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 	properties = {
 		"spring.config.location=file:src/main/resources/application.yaml",
 		"spring.datasource.url=jdbc:h2:mem:wiring",
-		"management.server.port=0"})
+		"management.server.port=0",
+		"spring.datasource.driver-class-name=org.h2.Driver",
+		"spring.datasource.username=sa",
+		"spring.datasource.password=",
+		"spring.jpa.properties.hibernate.dialect=ca.uhn.fhir.jpa.model.dialect.HapiFhirH2Dialect",
+		"hapi.fhir.security.enabled=false"})
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class ExtensionWiringTest {
 

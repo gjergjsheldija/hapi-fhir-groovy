@@ -356,7 +356,7 @@ searchcache:
 Run:
 
 ```bash
-for v in $(cut -d= -f1 .env | grep -E '^[A-Z_]+$'); do grep -q "\${$v" src/main/resources/application.yaml || echo "unbound: $v"; done
+for v in $(cut -d= -f1 .env | grep -E '^[A-Z_]+$'); do grep -qF "\${$v" src/main/resources/application.yaml || echo "unbound: $v"; done
 ```
 
 Expected output only: `APPLICATION_NAME`, `SERVER_ADDRESS`, `OPENSEARCH_ENABLED`, `OPENSEARCH_URL`, `OPENSEARCH_USERNAME`, `OPENSEARCH_PASSWORD`, `SUBSCRIPTION_EMAIL_ENABLED`, `JAVA_OPTS`, `DOCKER_REGISTRY` (none of these were bound before `700f787` either; they are consumed by compose/Makefile or unused).

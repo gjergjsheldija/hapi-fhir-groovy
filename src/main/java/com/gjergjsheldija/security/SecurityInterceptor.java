@@ -18,6 +18,7 @@ import ca.uhn.fhir.rest.server.interceptor.auth.AuthorizationInterceptor;
 import ca.uhn.fhir.rest.server.interceptor.auth.IAuthRule;
 import ca.uhn.fhir.rest.server.interceptor.auth.RuleBuilder;
 import com.gjergjsheldija.security.token.AccessTokenValidation;
+import jakarta.annotation.PostConstruct;
 import org.apache.http.HttpHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,13 @@ public class SecurityInterceptor extends AuthorizationInterceptor {
 
 	@Autowired
 	private AccessTokenValidation myAccessTokenValidation;
+
+	@PostConstruct
+	void warnIfSecurityDisabled() {
+		if (!securityEnabled) {
+			logger.warn("JWT security is DISABLED (hapi.fhir.security.enabled=false): every request is granted full access. Set SECURITY_ENABLED=true in production.");
+		}
+	}
 
 	@Override
 	public List<IAuthRule> buildRuleList(RequestDetails theRequestDetails) {
