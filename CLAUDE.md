@@ -17,7 +17,7 @@ This is a HAPI FHIR JPA server (healthcare data). Correctness and data safety be
 ## HAPI FHIR
 
 - Errors to clients are HAPI exceptions so they render as `OperationOutcome`: `InvalidRequestException` (400), `AuthenticationException` (401), `ForbiddenOperationException` (403), `ResourceNotFoundException` (404), `UnprocessableEntityException` (422), `InternalErrorException` (500).
-- Interceptors: annotate with `@Interceptor`, hook with `@Hook(Pointcut.X)`, and use only the parameter types that pointcut documents. Register them via `hapi.fhir.custom-interceptor-classes` in `application.yaml`.
+- Interceptors: annotate with `@Interceptor`, hook with `@Hook(Pointcut.X)`, and use only the parameter types that pointcut documents. Register standalone interceptors via `hapi.fhir.custom-interceptor-classes` in `application.yaml`; interceptors that are an integral part of a feature are registered by that feature's `*Bean` config (server pointcuts on `RestfulServer`, storage pointcuts on the JPA `IInterceptorService`).
 - Access data through DAOs from `DaoRegistry` with a `SystemRequestDetails` for internal calls — never JDBC/JPA directly.
 - Custom resources follow `com.gjergjsheldija.configuration` (resource class + `*Bean` registering the type, DAO and provider). Nested fields are `@Block` backbone elements.
 - Keep changes under `ca.uhn.fhir.jpa.starter` minimal; put features in `com.gjergjsheldija.<feature>`.

@@ -76,8 +76,8 @@ route params.
   creates `myAppDao` (`JpaResourceDao<App>`) and `myAppResourceProvider`. Modeled on
   `configuration/ConfigurationBean.java`.
 - `AppResourceProvider` — `BaseJpaResourceProvider<App>`. Modeled on `ConfigurationResourceProvider`.
-- A `SearchParameter` for `App-status` is created at startup if missing, so `App?status=active`
-  works without manual setup (unlike `Configuration`, which documents manual creation).
+- No custom `SearchParameter`: the registry loads all `App` resources and filters on `status`
+  in Java (App counts are small), avoiding FHIRPath on a custom type.
 
 ### Write validation
 
@@ -114,15 +114,22 @@ are URL-decoded before matching.
   sorted by literal-segment count descending (most specific first), and the set of
   `(appId, versionId)` pairs it was built from.
 - `Optional<Match> find(String method, String path)` — first matching route wins.
-- `refresh()` — runs `App?status=active` (synchronous load, system request details,
-  all partitions), compares the `(id, versionId)` set to the snapshot's, and rebuilds only
-  if it differs.
+- `refresh()` — loads all `App` resources (synchronous, `SystemRequestDetails.forAllPartitions()`),
+  keeps the `active` ones, compares the `(id, versionId, lastUpdated)` set to the snapshot's,
+  and rebuilds only if it differs. `lastUpdated` is in the key because after `$expunge` a
+  re-created App restarts at version 1. An App that fails to compile is skipped with a warning
+  so the others keep routing.
 - Triggers:
-  - `@PostConstruct` / application ready → `refresh()`.
-  - `STORAGE_PRECOMMIT_RESOURCE_CREATED/UPDATED/DELETED` for `App` → register a
-    transaction synchronization that calls `refresh()` after commit.
-  - `@Scheduled(fixedDelayString = "${hapi.fhir.apps.refresh-ms:30000}")` → `refresh()`;
-    this is how other replicas see changes. Failures are logged and the old snapshot is kept.
+  - `ApplicationReadyEvent` → `refresh()`, then a fixed-delay `refresh()` every
+    `hapi.fhir.apps.refresh-ms` on the existing Spring `TaskScheduler`; this is how other
+    replicas see changes. Failures are logged and the old snapshot is kept.
+  - `SERVER_PROCESSING_COMPLETED_NORMALLY` for REST create/update/delete/patch of `App` →
+    `refresh()` (runs after commit). Writes inside a transaction Bundle are picked up by the
+    periodic refresh.
+- Registration: the registry is registered on the `RestfulServer` interceptor service (server
+  pointcuts); `AppValidationInterceptor` on the JPA `IInterceptorService` (sees DAO writes too).
+  Both are registered by `AppBean`, not via `custom-interceptor-classes`, so the proxy can't be
+  enabled without its validation.
 
 ### `AppProxyFilter`
 
@@ -168,7 +175,7 @@ Errors (all with an `OperationOutcome` body):
 | Missing/invalid token on non-public op | 401 |
 
 Logging: one log line per proxied call via the existing logging setup, with MDC keys
-`uri`, `method`, `status`, `latency`, `client_id`, `operation_name` (= operation id),
+`uri`, `method`, `status`, `latency`, `operation_name` (= operation id),
 `id_resource_name` (= app id), matching `CustomLoggingInterceptor`.
 
 ### Configuration
@@ -199,11 +206,16 @@ custom-interceptor-classes:
   - com.gjergjsheldija.security.SecurityInterceptor
   - com.gjergjsheldija.terminology.TerminologyCapabilityInterceptor
   - com.gjergjsheldija.validation.CustomRequestValidatingInterceptor
-  - com.gjergjsheldija.app.AppValidationInterceptor
-  - com.gjergjsheldija.app.AppRouteRegistry          # its @Hook methods trigger local refresh
 custom-provider-classes:
   - com.gjergjsheldija.scripting.ScriptingProvider
 ```
+
+The same commits also dropped every `${ENV}` binding from `application.yaml` (26 variables,
+including `SQL_URL`/`SQL_USERNAME`/`SQL_PASSWORD`/`SQL_DIALECT`, so a compose deployment would
+run on in-memory H2). Restore them with H2 defaults for local runs, plus the `security`,
+`audit_event`, `log_request_body`, `cache_type`, validation, subscription and `searchcache`
+keys the extensions read. `CustomRequestValidatingInterceptor` must also skip `App` (it skips
+only `Configuration` today), or every App write is rejected as an unknown type.
 
 Re-enabling these turns the existing extensions back on (JWT security, BALP audit,
 logging, scripting, Infinispan cache). Their own config keys and env vars (`.env`) must be
