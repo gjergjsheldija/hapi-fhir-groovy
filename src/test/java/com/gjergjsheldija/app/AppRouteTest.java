@@ -67,7 +67,7 @@ class AppRouteTest {
 		assertEquals(List.of(), AppRoute.splitRequestPath(null));
 		assertEquals(List.of(), AppRoute.splitRequestPath(""));
 		assertEquals(List.of(), AppRoute.splitRequestPath("/"));
-		// trailing slash yields an empty last segment, which never matches a parsed path
+		// trailing slash yields an empty last segment; params reject empty segments
 		assertEquals(List.of("a", ""), AppRoute.splitRequestPath("/a/"));
 	}
 
@@ -84,6 +84,26 @@ class AppRouteTest {
 		assertFalse(a.collidesWith(route("GET", "Patient/$r/today")));
 		assertFalse(a.collidesWith(route("GET", "Patient/$s/{date}")));
 		assertFalse(a.collidesWith(route("GET", "Patient/$r")));
+	}
+
+	@Test
+	void paramDoesNotMatchEmptySegment() {
+		assertTrue(route("GET", "Patient/$daily-report/{date}").match(List.of("Patient", "$daily-report", "")).isEmpty());
+	}
+
+	@Test
+	void ambiguousCollisionDifferentLiteralsSameCount() {
+		// same method, same length, compatible positions (both have literal at 0 & 1, both have param at 2),
+		// same number of literals (2) → ambiguous, cannot prefer one
+		assertTrue(route("GET", "a/{x}/c").collidesWith(route("GET", "a/b/{y}")));
+		// same method, same length, but different literal count (3 vs 2) → not ambiguous, more specific wins
+		assertFalse(route("GET", "a/b/c").collidesWith(route("GET", "a/b/{y}")));
+	}
+
+	@Test
+	void decodedValuesAsParamValues() {
+		// Decoded value {q} is only ever a param value, never a template to re-parse
+		assertEquals(Optional.of(Map.of("p", "{q}")), route("GET", "$x/{p}").match(List.of("$x", "{q}")));
 	}
 
 	@Test

@@ -48,6 +48,10 @@ public record AppRoute(String method, List<String> segments, String appId, Strin
 		return PARAM.matcher(segment).matches();
 	}
 
+	/**
+	 * Expects the container-decoded path (HttpServletRequest#getPathInfo()); segments are not
+	 * decoded again, so encoded characters cannot create extra segments or templates.
+	 */
 	public static List<String> splitRequestPath(String pathInfo) {
 		if (pathInfo == null || pathInfo.isEmpty() || pathInfo.equals("/")) {
 			return List.of();
@@ -69,6 +73,9 @@ public record AppRoute(String method, List<String> segments, String appId, Strin
 			String segment = segments.get(i);
 			String actual = requestSegments.get(i);
 			if (isParam(segment)) {
+				if (actual.isEmpty()) {
+					return Optional.empty();
+				}
 				params.put(segment.substring(1, segment.length() - 1), actual);
 			} else if (!segment.equals(actual)) {
 				return Optional.empty();
@@ -78,17 +85,19 @@ public record AppRoute(String method, List<String> segments, String appId, Strin
 	}
 
 	/**
-	 * True when both routes would match exactly the same requests: same method, same length,
-	 * equal literals and params in the same positions.
+	 * True when some request would match both routes with equal specificity, so neither can be
+	 * preferred: same method, same length, every position compatible (equal literals, or a param
+	 * on either side), and the same number of literal segments.
 	 */
 	public boolean collidesWith(AppRoute other) {
-		if (!method.equals(other.method) || segments.size() != other.segments.size()) {
+		if (!method.equals(other.method) || segments.size() != other.segments.size()
+			|| literalCount() != other.literalCount()) {
 			return false;
 		}
 		for (int i = 0; i < segments.size(); i++) {
 			String a = segments.get(i);
 			String b = other.segments.get(i);
-			if (isParam(a) != isParam(b) || (!isParam(a) && !a.equals(b))) {
+			if (!isParam(a) && !isParam(b) && !a.equals(b)) {
 				return false;
 			}
 		}
