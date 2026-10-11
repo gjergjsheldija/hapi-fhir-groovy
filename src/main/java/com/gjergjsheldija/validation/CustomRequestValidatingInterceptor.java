@@ -17,6 +17,7 @@ import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.AuthenticationException;
 import ca.uhn.fhir.rest.server.interceptor.RequestValidatingInterceptor;
+import com.gjergjsheldija.app.App;
 import com.gjergjsheldija.configuration.Configuration;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -32,8 +33,9 @@ public class CustomRequestValidatingInterceptor extends RequestValidatingInterce
 	public boolean incomingRequestPostProcessed(RequestDetails theRequestDetails, HttpServletRequest theRequest,
 															  HttpServletResponse theResponse) throws AuthenticationException {
 
-		if (Configuration.class.getSimpleName().equals(theRequestDetails.getResourceName())) {
-			logger.trace("Skipping validation for Configuration resource");
+		String resourceName = theRequestDetails.getResourceName();
+		if (Configuration.class.getSimpleName().equals(resourceName) || App.class.getSimpleName().equals(resourceName)) {
+			logger.trace("Skipping validation for custom resource {}", resourceName);
 			return true;
 		}
 

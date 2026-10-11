@@ -68,6 +68,6 @@ class CustomRequestValidatingInterceptorTest {
 			httpServletResponse);
 
 		assertTrue(result, "Validation should be skipped for App resource");
-		verify(requestDetails, never()).loadRequestContents();
+		verify(requestDetails, never()).getRequestType();
 	}
 }
