@@ -1,23 +1,25 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `src/main/java`: Spring Boot entry point `ca.uhn.fhir.jpa.starter.Application`, resource providers, config.
-- `src/main/resources`: Application YAML, search parameter bundles, capability statements packaged with the WAR.
-- `src/main/webapp`: HAPI Testpage overlay shipped for the default UI.
-- `src/test/java` & `src/test/resources`: JUnit 5 suites (interceptors, MCP, MDM) plus matching fixtures grouped by FHIR version.
-- `charts/`, `docker-compose.yml`, `configs/`: Deployment templates for Helm, Docker, and Tomcat/server overrides.
-- `Dockerfile`, `build-docker-image.sh`: Reference container build scripts used by CI/CD.
+- `src/main/java/ca/uhn/fhir/jpa/starter`: upstream HAPI JPA starter (entry point `Application`, per-version configs, CR, CDS Hooks, MDM, MCP). Keep changes here minimal so upstream upgrades stay easy.
+- `src/main/java/com/gjergjsheldija`: our extensions — scripting (Groovy), security (JWT), auditevent (BALP), logging, cache (Infinispan), configuration (`Configuration` custom resource), terminology, jobs, validation.
+- `src/main/resources`: `application*.yaml`, `logback.xml`, example Groovy scripts, terminology capabilities.
+- `src/main/webapp`: HAPI Testpage overlay; `custom/`: branding content served by the Testpage.
+- `src/test/java` & `src/test/resources`: JUnit 5 + Spock suites; extension tests mirror `com.gjergjsheldija` packages and extend `com.gjergjsheldija.util.BaseFhirR4ForTesting`.
+- `docker-compose.yaml`, `docker-compose.dev.yaml`, `config/` (Postgres, Infinispan, Prometheus, Grafana, Tomcat), `Makefile`, `Dockerfile` (targets: `build-hapi`, `tomcat`, `default` distroless): local and production runtime.
+- `doc/`: one Markdown file per extension feature.
 
 ## Build, Test, and Development Commands
 - `mvn clean install`: Compile, run Surefire + Failsafe, and emit `target/ROOT.war`.
 - `mvn spring-boot:run -Pboot`: Start the server on port 8080 with hot reload-friendly Boot profile.
 - `mvn clean package spring-boot:repackage -Pboot && java -jar target/ROOT.war`: Build and exercise the bootable WAR.
-- `docker-compose up -d --build`: Launch JPAServer + PostgreSQL using the local Dockerfile.
+- `make build && make dev`: Build the image and start the dev stack (see `README.md`).
+- `docker compose up -d --build`: Launch the server + PostgreSQL + Infinispan + Prometheus/Grafana from `docker-compose.yaml`.
 - `docker run -p 8080:8080 hapiproject/hapi:latest`: Compare against the upstream binary distribution.
 
 ## Coding Style & Naming Conventions
-- Target Java 17, four-space indents, alphabetized imports, no wildcards.
-- Keep code under `ca.uhn.fhir.jpa.starter` and mirror packages in tests.
+- Compile target Java 17 (`<java.version>` in `pom.xml`); images run on JRE 21. Tabs for indentation (match the surrounding file), alphabetized imports, no wildcards.
+- New extension code goes under `com.gjergjsheldija.<feature>`; mirror packages in tests.
 - Prefer descriptive class suffixes (`*Provider`, `*Service`, `*Config`) and constructor injection with `final` collaborators.
 - YAML keys stay kebab-case; JSON fixtures use lower_snake_case filenames.
 
