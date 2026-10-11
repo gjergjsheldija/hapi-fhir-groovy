@@ -21,6 +21,7 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -113,6 +114,7 @@ public class OutputCalculationUnitTest {
 	//     Assertions.assertEquals(0, result.getEntry().size());
 	// }
 
+	@Disabled("Assertions commented out in 700f787 because they fail; tracked in #2")
 	@Test
 	void testStartFromAndDateToAreAfterEncounterEnd() {
 		Bundle bundle = getBundle(bundleJson);
@@ -139,6 +141,7 @@ public class OutputCalculationUnitTest {
 		// Assertions.assertEquals(0, result.getEntry().size());
 	}
 
+	@Disabled("Assertions commented out in 700f787 because they fail; tracked in #2")
 	@Test
 	void testStartFromAndDateToAreBeforeEncounterStart() {
 		Bundle bundle = getBundle(bundleJson);
@@ -162,6 +165,7 @@ public class OutputCalculationUnitTest {
 		// Assertions.assertEquals(0, result.getEntry().size());
 	}
 
+	@Disabled("Assertions commented out in 700f787 because they fail; tracked in #2")
 	@Test
 	void testInProgressEncounterCalculations() throws IOException {
 		//
