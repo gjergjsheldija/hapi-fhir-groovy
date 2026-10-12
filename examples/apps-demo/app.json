@@ -1,0 +1,10 @@
+{
+  "resourceType": "App",
+  "id": "demo.app",
+  "status": "active",
+  "endpoint": { "type": "http-rpc", "url": "http://localhost:8888", "secret": "demo-secret" },
+  "operation": [
+    { "id": "daily-report", "method": "GET", "path": "Patient/$daily-report/{date}" },
+    { "id": "hello", "method": "GET", "path": "$hello", "public": true }
+  ]
+}

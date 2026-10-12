@@ -4,6 +4,8 @@ Apps let an external service (any language) serve custom endpoints under `/fhir/
 Register an `App` resource; the server forwards matching requests to the app and returns
 its response unchanged. Inspired by [Aidbox Apps](https://www.health-samurai.io/docs/aidbox/developer-experience/apps).
 
+See `examples/apps-demo/` for a runnable demo.
+
 ## Registering an App
 
 ```json
