@@ -5,6 +5,7 @@ import ca.uhn.fhir.interceptor.api.IInterceptorService;
 import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
 import ca.uhn.fhir.jpa.dao.JpaResourceDao;
 import ca.uhn.fhir.rest.server.RestfulServer;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -54,8 +55,9 @@ public class AppBean {
 	}
 
 	@Bean
-	public AppValidationInterceptor appValidationInterceptor(AppRouteRegistry registry, IInterceptorService interceptorService) {
-		AppValidationInterceptor interceptor = new AppValidationInterceptor(fhirContext, registry);
+	public AppValidationInterceptor appValidationInterceptor(AppRouteRegistry registry, IFhirResourceDao<App> appDao,
+																		 ObjectProvider<RestfulServer> restfulServer, IInterceptorService interceptorService) {
+		AppValidationInterceptor interceptor = new AppValidationInterceptor(fhirContext, registry, appDao, restfulServer);
 		// The JPA interceptor service sees every DAO write, including non-REST ones.
 		interceptorService.registerInterceptor(interceptor);
 		return interceptor;

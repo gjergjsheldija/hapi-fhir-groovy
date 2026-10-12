@@ -43,12 +43,12 @@ class AppValidationInterceptorTest extends BaseFhirR4ForTesting {
 
 	static Stream<Arguments> invalidApps() {
 		return Stream.of(
-			Arguments.of("bad status", app("v", "enabled", URL, null, op("o", "GET", "$x", false)), "status"),
+			Arguments.of("bad status", app("v", "enabled", URL, null, op("o", "GET", "$x", false)), "status must be one of"),
 			Arguments.of("bad endpoint type", app("v", "active", URL, null, op("o", "GET", "$x", false))
-				.replace("\"http-rpc\"", "\"grpc\""), "endpoint.type"),
-			Arguments.of("non-http url", app("v", "active", "ftp://host", null, op("o", "GET", "$x", false)), "endpoint.url"),
-			Arguments.of("relative url", app("v", "active", "/relative", null, op("o", "GET", "$x", false)), "endpoint.url"),
-			Arguments.of("bad method", app("v", "active", URL, null, op("o", "HEAD", "$x", false)), "method"),
+				.replace("\"http-rpc\"", "\"grpc\""), "endpoint.type must be http-rpc"),
+			Arguments.of("non-http url", app("v", "active", "ftp://host", null, op("o", "GET", "$x", false)), "endpoint.url must be an absolute http(s) URL"),
+			Arguments.of("relative url", app("v", "active", "/relative", null, op("o", "GET", "$x", false)), "endpoint.url must be an absolute http(s) URL"),
+			Arguments.of("bad method", app("v", "active", URL, null, op("o", "HEAD", "$x", false)), "method must be one of"),
 			Arguments.of("duplicate op id", app("v", "active", URL, null,
 				op("o", "GET", "$x", false) + "," + op("o", "GET", "$y", false)), "duplicate operation id"),
 			Arguments.of("malformed path", app("v", "active", URL, null, op("o", "GET", "a//b", false)), "empty segment"),
@@ -58,6 +58,17 @@ class AppValidationInterceptorTest extends BaseFhirR4ForTesting {
 			Arguments.of("shadows custom type", app("v", "active", URL, null, op("o", "GET", "App/{id}", false)), "shadow"),
 			Arguments.of("param first", app("v", "active", URL, null, op("o", "GET", "{anything}", false)), "shadow"),
 			Arguments.of("metadata", app("v", "active", URL, null, op("o", "GET", "metadata", false)), "shadow"),
+			Arguments.of("no status", app("v", "active", URL, null, op("o", "GET", "$x", false))
+					.replace("\"status\": \"active\",", ""), "status must be one of"),
+			Arguments.of("no method", app("v", "active", URL, null, op("o", "GET", "$x", false))
+					.replace("\"method\": \"GET\",", ""), "method must be one of"),
+			Arguments.of("no operations", app("v", "active", URL, null, ""), "at least one operation"),
+			Arguments.of("expunge", app("v", "active", URL, null, op("o", "GET", "$expunge", false)), "shadow server operation"),
+			Arguments.of("validate on type", app("v", "active", URL, null, op("o", "GET", "Patient/$validate", false)), "shadow server operation"),
+			Arguments.of("well-known", app("v", "active", URL, null, op("o", "GET", ".well-known/smart-configuration", false)), "shadow"),
+			Arguments.of("swagger", app("v", "active", URL, null, op("o", "GET", "swagger-ui", false)), "shadow"),
+			Arguments.of("configuration read", app("v", "active", URL, null, op("o", "GET", "Configuration/{id}", false)), "shadow"),
+			Arguments.of("instance path", app("v", "active", URL, null, op("o", "GET", "Patient/{id}/$x", false)), "shadow"),
 			Arguments.of("self collision", app("v", "active", URL, null,
 				op("o1", "GET", "$x/{a}", false) + "," + op("o2", "GET", "$x/{b}", false)), "collides"));
 	}
@@ -103,5 +114,20 @@ class AppValidationInterceptorTest extends BaseFhirR4ForTesting {
 		HttpResponse<String> second = AppJson.put(port, "second", app("second", "active", URL, null, op("o", "GET", "a/b/{y}", false)));
 		assertEquals(422, second.statusCode(), second.body());
 		assertTrue(second.body().contains("collides"), second.body());
+	}
+
+	@Test
+	void rejectsCollidingAppsInOneTransactionBundle() throws Exception {
+		String a = app("ba", "active", URL, null, op("o", "GET", "$x/{a}", false));
+		String b = app("bb", "active", URL, null, op("o", "GET", "$x/{b}", false));
+		String bundle = """
+			{ "resourceType": "Bundle", "type": "transaction", "entry": [
+			  { "resource": %s, "request": { "method": "PUT", "url": "App/ba" } },
+			  { "resource": %s, "request": { "method": "PUT", "url": "App/bb" } } ] }""".formatted(a, b);
+		HttpResponse<String> response = AppJson.send(port, "POST", "", "application/fhir+json", bundle, null);
+		assertEquals(422, response.statusCode(), response.body());
+		assertTrue(response.body().contains("collides"), response.body());
+		assertEquals(404, AppJson.send(port, "GET", "App/ba", null, null, null).statusCode());
+		assertEquals(404, AppJson.send(port, "GET", "App/bb", null, null, null).statusCode());
 	}
 }

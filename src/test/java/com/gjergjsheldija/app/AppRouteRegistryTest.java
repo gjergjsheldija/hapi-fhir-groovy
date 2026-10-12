@@ -133,4 +133,15 @@ class AppRouteRegistryTest extends BaseFhirR4ForTesting {
 		assertEquals(1, routes.get("GET").size());
 		assertEquals("good", routes.get("GET").get(0).appId());
 	}
+
+	@Test
+	void collidingAppsKeepOnlyTheOlderOne() {
+		App older = app("older", "active", "http://127.0.0.1:1", "$x/{a}");
+		older.getMeta().setLastUpdated(new java.util.Date(1000));
+		App newer = app("newer", "active", "http://127.0.0.1:2", "$x/{b}");
+		newer.getMeta().setLastUpdated(new java.util.Date(2000));
+		Map<String, List<AppRoute>> routes = AppRouteRegistry.buildRoutes(List.of(newer, older));
+		assertEquals(1, routes.get("GET").size());
+		assertEquals("older", routes.get("GET").get(0).appId());
+	}
 }

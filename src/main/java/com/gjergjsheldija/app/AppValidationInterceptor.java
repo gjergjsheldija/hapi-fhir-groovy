@@ -4,8 +4,18 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
+import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
+import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
+import ca.uhn.fhir.rest.api.server.SystemRequestDetails;
+import ca.uhn.fhir.rest.server.ResourceBinding;
+import ca.uhn.fhir.rest.server.RestfulServer;
+import ca.uhn.fhir.rest.server.method.BaseMethodBinding;
+import ca.uhn.fhir.rest.server.method.OperationMethodBinding;
 import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
+import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Bundle;
+import org.springframework.beans.factory.ObjectProvider;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -23,14 +33,19 @@ public class AppValidationInterceptor {
 	private static final Set<String> METHODS = Set.of("GET", "POST", "PUT", "DELETE", "PATCH");
 	private static final Set<String> STATUSES = Set.of(App.STATUS_ACTIVE, App.STATUS_INACTIVE);
 	private static final Set<String> CUSTOM_TYPES = Set.of("App", "Configuration");
-	private static final Set<String> RESERVED_FIRST_SEGMENTS = Set.of("metadata", "_history");
+	private static final Set<String> RESERVED_FIRST_SEGMENTS = Set.of("metadata", "_history", "swagger-ui", "api-docs", "_search", ".well-known");
 
 	private final FhirContext fhirContext;
 	private final AppRouteRegistry registry;
+	private final IFhirResourceDao<App> appDao;
+	private final ObjectProvider<RestfulServer> restfulServer;
 
-	public AppValidationInterceptor(FhirContext fhirContext, AppRouteRegistry registry) {
+	public AppValidationInterceptor(FhirContext fhirContext, AppRouteRegistry registry, IFhirResourceDao<App> appDao,
+											  ObjectProvider<RestfulServer> restfulServer) {
 		this.fhirContext = fhirContext;
 		this.registry = registry;
+		this.appDao = appDao;
+		this.restfulServer = restfulServer;
 	}
 
 	@Hook(Pointcut.STORAGE_PRESTORAGE_RESOURCE_CREATED)
@@ -47,11 +62,50 @@ public class AppValidationInterceptor {
 		}
 	}
 
+	/**
+	 * Entries of one transaction cannot see each other through the DAO search, so check Apps in the Bundle against each other.
+	 */
+	@Hook(Pointcut.STORAGE_TRANSACTION_PROCESSING)
+	public void onTransaction(IBaseBundle theInput) {
+		if (!(theInput instanceof Bundle bundle)) {
+			return;
+		}
+		List<AppRoute> seen = new ArrayList<>();
+		List<String> errors = new ArrayList<>();
+		for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
+			if (!(entry.getResource() instanceof App app) || !App.STATUS_ACTIVE.equals(app.getStatus())) {
+				continue;
+			}
+			String url = entry.getRequest().getUrl();
+			String appId = app.getIdElement().hasIdPart() ? app.getIdElement().getIdPart()
+				: (url != null && url.startsWith("App/") ? url.substring(4) : "?" + seen.size());
+			// Malformed Apps are rejected per entry by validate(); only compile well-formed routes here.
+			for (App.AppOperationComponent op : app.getOperation()) {
+				try {
+					AppRoute route = new AppRoute(op.getMethod(), AppRoute.parsePath(op.getPath()), appId, op.getId(), op.isPublic(), null, null);
+					for (AppRoute other : seen) {
+						if (!other.appId().equals(appId) && other.collidesWith(route)) {
+							errors.add("App " + appId + " operation " + route.operationId() + " collides with App " + other.appId()
+								+ " operation " + other.operationId());
+						}
+					}
+					seen.add(route);
+				} catch (RuntimeException e) {
+					// ignore here; validate() reports it
+				}
+			}
+		}
+		if (!errors.isEmpty()) {
+			throw new UnprocessableEntityException("Invalid App Bundle: " + String.join("; ", errors));
+		}
+	}
+
 	void validate(App app) {
 		List<String> errors = new ArrayList<>();
+		Set<String> serverOps = serverOperationNames();
 		String appId = app.getIdElement().getIdPart();
 
-		if (!STATUSES.contains(app.getStatus())) {
+		if (app.getStatus() == null || !STATUSES.contains(app.getStatus())) {
 			errors.add("status must be one of " + STATUSES);
 		}
 		App.AppEndpointComponent endpoint = app.getEndpoint();
@@ -78,7 +132,7 @@ public class AppValidationInterceptor {
 			} else if (!operationIds.add(opId)) {
 				errors.add("duplicate operation id " + opId);
 			}
-			if (!METHODS.contains(op.getMethod())) {
+			if (op.getMethod() == null || !METHODS.contains(op.getMethod())) {
 				errors.add("operation " + opId + ": method must be one of " + METHODS);
 				continue;
 			}
@@ -89,7 +143,7 @@ public class AppValidationInterceptor {
 				errors.add("operation " + opId + ": " + e.getMessage());
 				continue;
 			}
-			String shadow = shadowProblem(segments);
+			String shadow = shadowProblem(segments, serverOps);
 			if (shadow != null) {
 				errors.add("operation " + opId + ": " + shadow);
 				continue;
@@ -104,8 +158,16 @@ public class AppValidationInterceptor {
 		}
 
 		if (App.STATUS_ACTIVE.equals(app.getStatus())) {
+			List<AppRoute> others = new ArrayList<>(registry.routes());
+			// The registry is a snapshot; also check stored Apps (same-transaction siblings, other nodes).
+			List<App> stored = appDao.search(SearchParameterMap.newSynchronous(), SystemRequestDetails.forAllPartitions())
+				.getAllResources().stream()
+				.map(App.class::cast)
+				.filter(a -> App.STATUS_ACTIVE.equals(a.getStatus()) && !appId.equals(a.getIdElement().getIdPart()))
+				.toList();
+			AppRouteRegistry.buildRoutes(stored).values().forEach(others::addAll);
 			for (AppRoute mine : ownRoutes) {
-				for (AppRoute other : registry.routes()) {
+				for (AppRoute other : others) {
 					if (!other.appId().equals(appId) && other.collidesWith(mine)) {
 						errors.add("operation " + mine.operationId() + " collides with App " + other.appId()
 							+ " operation " + other.operationId());
@@ -119,16 +181,37 @@ public class AppValidationInterceptor {
 		}
 	}
 
-	private String shadowProblem(List<String> segments) {
+	private String shadowProblem(List<String> segments, Set<String> serverOps) {
 		String first = segments.get(0);
 		if (AppRoute.isParam(first) || RESERVED_FIRST_SEGMENTS.contains(first)) {
 			return "path would shadow core FHIR endpoints";
+		}
+		for (int i = 0; i < Math.min(2, segments.size()); i++) {
+			String seg = segments.get(i);
+			if (seg.startsWith("$") && serverOps.contains(seg)) {
+				return "path would shadow server operation " + seg;
+			}
 		}
 		boolean isResourceType = fhirContext.getResourceTypes().contains(first) || CUSTOM_TYPES.contains(first);
 		if (isResourceType && (segments.size() < 2 || !segments.get(1).startsWith("$"))) {
 			return "path would shadow core FHIR endpoints; after a resource type the next segment must start with $";
 		}
 		return null;
+	}
+
+	private Set<String> serverOperationNames() {
+		RestfulServer server = restfulServer.getObject();
+		Set<String> names = new HashSet<>();
+		List<BaseMethodBinding> bindings = new ArrayList<>(server.getServerBindings());
+		for (ResourceBinding rb : server.getResourceBindings()) {
+			bindings.addAll(rb.getMethodBindings());
+		}
+		for (BaseMethodBinding b : bindings) {
+			if (b instanceof OperationMethodBinding op && op.getName() != null) {
+				names.add(op.getName().startsWith("$") ? op.getName() : "$" + op.getName());
+			}
+		}
+		return names;
 	}
 
 	private static boolean isHttpUrl(String url) {

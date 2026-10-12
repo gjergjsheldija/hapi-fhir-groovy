@@ -94,7 +94,11 @@ public class AppRouteRegistry {
 
 	static Map<String, List<AppRoute>> buildRoutes(List<App> apps) {
 		Map<String, List<AppRoute>> byMethod = new HashMap<>();
-		for (App app : apps) {
+		List<App> ordered = apps.stream()
+			.sorted(Comparator.comparing((App a) -> a.getMeta().getLastUpdated(), Comparator.nullsLast(Comparator.naturalOrder())))
+			.toList();
+		List<AppRoute> accepted = new ArrayList<>();
+		for (App app : ordered) {
 			String appId = app.getIdElement().getIdPart();
 			try {
 				List<AppRoute> appRoutes = new ArrayList<>();
@@ -105,7 +109,18 @@ public class AppRouteRegistry {
 					appRoutes.add(new AppRoute(op.getMethod(), AppRoute.parsePath(op.getPath()), appId, op.getId(),
 						op.isPublic(), app.getEndpoint().getUrl(), app.getEndpoint().getSecret()));
 				}
+				for (AppRoute route : appRoutes) {
+					for (AppRoute other : accepted) {
+						if (!other.appId().equals(appId) && other.collidesWith(route)) {
+							ourLog.warn("Skipping App {}: collides with App {} ({} {})", appId, other.appId(), other.method(), other.segments());
+							throw new IllegalStateException("collision");
+						}
+					}
+				}
+				accepted.addAll(appRoutes);
 				appRoutes.forEach(route -> byMethod.computeIfAbsent(route.method(), k -> new ArrayList<>()).add(route));
+			} catch (IllegalStateException e) {
+				// collision already logged
 			} catch (RuntimeException e) {
 				ourLog.warn("Skipping App {}: invalid definition ({}: {})", appId, e.getClass().getSimpleName(), e.getMessage());
 			}
