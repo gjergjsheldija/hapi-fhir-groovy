@@ -4,17 +4,20 @@ import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
+import ca.uhn.fhir.jpa.dao.tx.IHapiTransactionService;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.rest.api.RestOperationTypeEnum;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.api.server.SystemRequestDetails;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Bundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.TaskScheduler;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -29,16 +32,14 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Immutable snapshot of routes from active Apps. Rebuilt on local REST writes to App and
- * periodically, so changes made on other nodes are picked up within refresh-ms.
+ * Immutable snapshot of routes from active Apps. Rebuilt after each committed App write on this node
+ * (before the write's response is sent), after $expunge, and periodically, so changes made on other
+ * nodes are picked up within refresh-ms.
  */
 @Interceptor
 public class AppRouteRegistry {
 
 	private static final Logger ourLog = LoggerFactory.getLogger(AppRouteRegistry.class);
-	private static final Set<RestOperationTypeEnum> WRITES = EnumSet.of(
-		RestOperationTypeEnum.CREATE, RestOperationTypeEnum.UPDATE, RestOperationTypeEnum.DELETE, RestOperationTypeEnum.PATCH);
-
 	private static final Set<RestOperationTypeEnum> EXTENDED_OPS = EnumSet.of(
 		RestOperationTypeEnum.EXTENDED_OPERATION_SERVER, RestOperationTypeEnum.EXTENDED_OPERATION_TYPE,
 		RestOperationTypeEnum.EXTENDED_OPERATION_INSTANCE);
@@ -50,12 +51,15 @@ public class AppRouteRegistry {
 	}
 
 	private final IFhirResourceDao<App> appDao;
+	private final IHapiTransactionService txService;
 	private final TaskScheduler taskScheduler;
 	private final Duration refreshInterval;
 	private volatile Snapshot snapshot = new Snapshot(Map.of(), Set.of());
 
-	public AppRouteRegistry(IFhirResourceDao<App> appDao, TaskScheduler taskScheduler, Duration refreshInterval) {
+	public AppRouteRegistry(IFhirResourceDao<App> appDao, IHapiTransactionService txService, TaskScheduler taskScheduler,
+		Duration refreshInterval) {
 		this.appDao = appDao;
+		this.txService = txService;
 		this.taskScheduler = taskScheduler;
 		this.refreshInterval = refreshInterval;
 	}
@@ -71,11 +75,13 @@ public class AppRouteRegistry {
 	}
 
 	public synchronized boolean refresh() {
-		List<App> apps = appDao.search(SearchParameterMap.newSynchronous(), SystemRequestDetails.forAllPartitions())
-			.getAllResources().stream()
-			.map(App.class::cast)
-			.filter(app -> App.STATUS_ACTIVE.equals(app.getStatus()))
-			.toList();
+		SystemRequestDetails request = SystemRequestDetails.forAllPartitions();
+		// A new transaction: from afterCommit, joining the finished write's transaction trips Hibernate.
+		List<App> apps = txService.withRequest(request).withPropagation(Propagation.REQUIRES_NEW).execute(() ->
+			appDao.search(SearchParameterMap.newSynchronous(), request).getAllResources().stream()
+				.map(App.class::cast)
+				.filter(app -> App.STATUS_ACTIVE.equals(app.getStatus()))
+				.toList());
 		// lastUpdated is part of the key: after $expunge a re-created App restarts at version 1.
 		Set<String> versionKeys = apps.stream()
 			.map(app -> app.getIdElement().getIdPart() + "/" + app.getIdElement().getVersionIdPart() + "/"
@@ -127,31 +133,55 @@ public class AppRouteRegistry {
 		return Map.copyOf(sorted);
 	}
 
+	/** $expunge removes Apps without firing the storage hooks below. */
 	@Hook(Pointcut.SERVER_PROCESSING_COMPLETED_NORMALLY)
 	public void onRequestCompleted(RequestDetails theRequestDetails) {
-		RestOperationTypeEnum type = theRequestDetails.getRestOperationType();
-		boolean appWrite = "App".equals(theRequestDetails.getResourceName()) && WRITES.contains(type);
-		// Bundles have no resource name; refresh only when one touches App. $expunge removes Apps.
-		boolean bundle = (type == RestOperationTypeEnum.TRANSACTION || type == RestOperationTypeEnum.BATCH)
-			&& touchesApp(theRequestDetails.getResource());
-		boolean expunge = EXTENDED_OPS.contains(type) && "$expunge".equals(theRequestDetails.getOperation());
-		if (appWrite || bundle || expunge) {
+		if (EXTENDED_OPS.contains(theRequestDetails.getRestOperationType()) && "$expunge".equals(theRequestDetails.getOperation())) {
 			refreshQuietly();
 		}
 	}
 
-	private static boolean touchesApp(IBaseResource theRequestBundle) {
-		if (!(theRequestBundle instanceof Bundle bundle)) {
-			return false;
+	/** Storage hooks see every App write (REST, Bundle entry, DAO call) on this node, before the response is sent. */
+	@Hook(Pointcut.STORAGE_PRECOMMIT_RESOURCE_CREATED)
+	public void onCreated(IBaseResource theResource) {
+		refreshAfterCommit(theResource);
+	}
+
+	@Hook(Pointcut.STORAGE_PRECOMMIT_RESOURCE_UPDATED)
+	public void onUpdated(IBaseResource theOldResource, IBaseResource theNewResource) {
+		refreshAfterCommit(theNewResource);
+	}
+
+	@Hook(Pointcut.STORAGE_PRECOMMIT_RESOURCE_DELETED)
+	public void onDeleted(IBaseResource theResource) {
+		refreshAfterCommit(theResource);
+	}
+
+	/** One refresh per transaction, after commit; a rolled-back write is left to the periodic refresh. */
+	private void refreshAfterCommit(IBaseResource theResource) {
+		if (!(theResource instanceof App)) {
+			return;
 		}
-		for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
-			String url = entry.getRequest().getUrl();
-			if (entry.getResource() instanceof App
-				|| (url != null && (url.equals("App") || url.startsWith("App/") || url.startsWith("App?")))) {
-				return true;
+		if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+			refreshQuietly();
+			return;
+		}
+		// The registry itself is the per-transaction dedupe key.
+		if (TransactionSynchronizationManager.hasResource(this)) {
+			return;
+		}
+		TransactionSynchronizationManager.bindResource(this, Boolean.TRUE);
+		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+			@Override
+			public void afterCommit() {
+				refreshQuietly();
 			}
-		}
-		return false;
+
+			@Override
+			public void afterCompletion(int theStatus) {
+				TransactionSynchronizationManager.unbindResourceIfPossible(AppRouteRegistry.this);
+			}
+		});
 	}
 
 	@EventListener(ApplicationReadyEvent.class)

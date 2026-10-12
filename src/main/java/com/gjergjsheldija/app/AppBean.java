@@ -4,6 +4,7 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.interceptor.api.IInterceptorService;
 import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
 import ca.uhn.fhir.jpa.dao.JpaResourceDao;
+import ca.uhn.fhir.jpa.dao.tx.IHapiTransactionService;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import com.gjergjsheldija.security.AdminScopeGuard;
@@ -52,10 +53,14 @@ public class AppBean {
 		IFhirResourceDao<App> appDao,
 		RestfulServer restfulServer,
 		@Qualifier("taskScheduler") TaskScheduler taskScheduler,
-		@Value("${hapi.fhir.apps.refresh-ms:30000}") long refreshMs) {
-		AppRouteRegistry registry = new AppRouteRegistry(appDao, taskScheduler, Duration.ofMillis(refreshMs));
-		// SERVER_* pointcuts fire on the RestfulServer's own interceptor service.
+		@Value("${hapi.fhir.apps.refresh-ms:30000}") long refreshMs,
+		IInterceptorService interceptorService,
+		IHapiTransactionService txService) {
+		AppRouteRegistry registry = new AppRouteRegistry(appDao, txService, taskScheduler, Duration.ofMillis(refreshMs));
+		// SERVER_* pointcuts ($expunge) fire on the RestfulServer's own interceptor service...
 		restfulServer.registerInterceptor(registry);
+		// ...STORAGE_* ones on the JPA service, which sees every write, including non-REST ones.
+		interceptorService.registerInterceptor(registry);
 		return registry;
 	}
 

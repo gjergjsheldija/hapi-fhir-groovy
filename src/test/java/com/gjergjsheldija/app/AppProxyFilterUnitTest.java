@@ -2,6 +2,7 @@ package com.gjergjsheldija.app;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
+import ca.uhn.fhir.jpa.dao.tx.NonTransactionalHapiTransactionService;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
@@ -46,7 +47,7 @@ class AppProxyFilterUnitTest {
 		IBundleProvider bundle = mock(IBundleProvider.class);
 		when(bundle.getAllResources()).thenReturn(List.<IBaseResource>of(app));
 		when(dao.search(any(SearchParameterMap.class), any(RequestDetails.class))).thenReturn(bundle);
-		AppRouteRegistry registry = new AppRouteRegistry(dao, mock(TaskScheduler.class), Duration.ofHours(1));
+		AppRouteRegistry registry = new AppRouteRegistry(dao, new NonTransactionalHapiTransactionService(), mock(TaskScheduler.class), Duration.ofHours(1));
 		registry.refresh();
 		return registry;
 	}

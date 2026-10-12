@@ -64,7 +64,6 @@ step "3. Register the App: PUT App/demo.app" '^(200|201)$' '"demo.app"' \
   -X PUT "${JSON[@]}" ${ADMIN_AUTH[@]+"${ADMIN_AUTH[@]}"} --data "$MANIFEST" "$FHIR_BASE/App/demo.app"
 SHOW_BODY=1
 
-sleep 1 # route goes live just after the PUT response is sent (see #19)
 step "4. Public operation: GET \$hello" '^200$' 'Hello from an external App' \
   ${USER_AUTH[@]+"${USER_AUTH[@]}"} "$FHIR_BASE/\$hello"
 
@@ -83,7 +82,6 @@ echo; echo "(stopping the demo App)"; kill "$APP_PID"; wait "$APP_PID" 2>/dev/nu
 step "8. Guard rail: App down -> \$hello" '^502$' '' ${USER_AUTH[@]+"${USER_AUTH[@]}"} "$FHIR_BASE/\$hello"
 
 step "9a. Cleanup: DELETE App/demo.app" '^(200|204)$' '' -X DELETE ${ADMIN_AUTH[@]+"${ADMIN_AUTH[@]}"} "$FHIR_BASE/App/demo.app"
-sleep 1 # route goes away just after the DELETE response is sent (see #19)
 step "9b. After delete, \$hello falls through to HAPI" '^400$' '' ${USER_AUTH[@]+"${USER_AUTH[@]}"} "$FHIR_BASE/\$hello"
 
 echo
