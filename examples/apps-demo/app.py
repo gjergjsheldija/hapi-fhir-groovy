@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Demo App for the HAPI Apps feature. Standard library only."""
 import base64
+import hmac
 import json
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -25,19 +26,27 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_POST(self):
-        length = int(self.headers.get("Content-Length") or 0)
-        raw = self.rfile.read(length)
-        if self.headers.get("Authorization") != EXPECTED:
+        try:
+            raw = self.rfile.read(int(self.headers.get("Content-Length") or 0))
+        except ValueError:
+            return self.reply(400, {"error": "bad envelope"})
+        if not hmac.compare_digest(self.headers.get("Authorization", "").encode(), EXPECTED.encode()):
             print("(auth) -> 401", flush=True)
             return self.reply(401, {"error": "bad app credentials"})
-        env = json.loads(raw or b"{}")
-        op = env.get("operation", {}).get("id")
-        req = env.get("request", {})
+        try:
+            env = json.loads(raw or b"{}")
+        except ValueError:
+            env = None
+        if not isinstance(env, dict):
+            print("(envelope) -> 400", flush=True)
+            return self.reply(400, {"error": "bad envelope"})
+        op = (env.get("operation") or {}).get("id")
+        req = env.get("request") or {}
         if op == "daily-report":
-            who = "authenticated user" if "authorization" in req.get("headers", {}) else "anonymous"
-            body = params(("date", req.get("route-params", {}).get("date", "")),
+            who = "authenticated user" if "authorization" in {k.lower() for k in (req.get("headers") or {})} else "anonymous"
+            body = params(("date", (req.get("route-params") or {}).get("date", "")),
                           ("requested-by", who),
-                          ("params", json.dumps(req.get("params", {}))))
+                          ("params", json.dumps(req.get("params") or {})))
             status = 200
         elif op == "hello":
             body, status = params(("greeting", "Hello from an external App")), 200
