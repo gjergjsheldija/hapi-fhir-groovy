@@ -53,6 +53,15 @@ class AppRouteRegistryTest extends BaseFhirR4ForTesting {
 		return app;
 	}
 
+	/** REST writes refresh the registry right after the response is sent; wait for that (refresh-ms is 1 h here). */
+	private boolean awaitRoute(String method, List<String> segments) throws InterruptedException {
+		long deadline = System.currentTimeMillis() + 2000;
+		while (registry.find(method, segments).isEmpty() && System.currentTimeMillis() < deadline) {
+			Thread.sleep(20);
+		}
+		return registry.find(method, segments).isPresent();
+	}
+
 	/** Simulates a write made on another node: DAO call, no REST request, so no local hook fires. */
 	private void writeViaDao(App app) {
 		appDao.update(app, new SystemRequestDetails());
@@ -100,7 +109,7 @@ class AppRouteRegistryTest extends BaseFhirR4ForTesting {
 	void restWriteRefreshesImmediately() throws Exception {
 		AppJson.put(port, "rest1", AppJson.app("rest1", "active", "http://127.0.0.1:1", null,
 			AppJson.op("op1", "POST", "User/$register", true)));
-		assertTrue(registry.find("POST", List.of("User", "$register")).isPresent());
+		assertTrue(awaitRoute("POST", List.of("User", "$register")));
 	}
 
 	@Test
