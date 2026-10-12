@@ -4,8 +4,13 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
 import ca.uhn.fhir.jpa.dao.JpaResourceDao;
 import ca.uhn.fhir.rest.server.RestfulServer;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.TaskScheduler;
+
+import java.time.Duration;
 
 @Configuration
 public class AppBean {
@@ -33,5 +38,17 @@ public class AppBean {
 		provider.setDao(appDao);
 		restfulServer.registerProvider(provider);
 		return provider;
+	}
+
+	@Bean
+	public AppRouteRegistry appRouteRegistry(
+		IFhirResourceDao<App> appDao,
+		RestfulServer restfulServer,
+		@Qualifier("taskScheduler") TaskScheduler taskScheduler,
+		@Value("${hapi.fhir.apps.refresh-ms:30000}") long refreshMs) {
+		AppRouteRegistry registry = new AppRouteRegistry(appDao, taskScheduler, Duration.ofMillis(refreshMs));
+		// SERVER_* pointcuts fire on the RestfulServer's own interceptor service.
+		restfulServer.registerInterceptor(registry);
+		return registry;
 	}
 }

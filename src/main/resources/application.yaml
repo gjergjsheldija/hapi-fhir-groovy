@@ -428,6 +428,8 @@ hapi:
       enabled: ${SECURITY_ENABLED:false}
       server: ${SECURITY_SERVER:http://localhost:8181/realms/clinomic}
       jwks: ${SECURITY_JWKS:http://localhost:8181/realms/clinomic/protocol/openid-connect/certs}
+    apps:
+      refresh-ms: 30000              # how often each node re-reads App resources (picks up changes from other nodes)
     
     # store_meta_source_information: NONE
     # bundle_batch_pool_size: 10
