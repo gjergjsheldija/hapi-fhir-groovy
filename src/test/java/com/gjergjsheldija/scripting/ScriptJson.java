@@ -11,6 +11,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.function.BooleanSupplier;
 
 /** Raw HTTP helpers, so tests control the URL, body and Authorization header exactly. */
 final class ScriptJson {
@@ -50,14 +51,14 @@ final class ScriptJson {
 	 * ScriptingInterceptor loads on SERVER_PROCESSING_COMPLETED_NORMALLY, which runs after the response was sent,
 	 * so the client can see the response before the script is loaded. Polls for up to {@code millis}.
 	 */
-	static boolean loadedWithin(ScriptingSvcImpl scriptingSvc, long millis) throws InterruptedException {
+	static boolean within(long millis, BooleanSupplier condition) throws InterruptedException {
 		long deadline = System.currentTimeMillis() + millis;
-		while (System.currentTimeMillis() < deadline) {
-			if (!scriptingSvc.listCustomScripts().isEmpty()) {
-				return true;
+		while (!condition.getAsBoolean()) {
+			if (System.currentTimeMillis() >= deadline) {
+				return false;
 			}
 			Thread.sleep(50);
 		}
-		return !scriptingSvc.listCustomScripts().isEmpty();
+		return true;
 	}
 }

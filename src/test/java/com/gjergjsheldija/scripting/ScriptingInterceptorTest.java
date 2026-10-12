@@ -45,11 +45,15 @@ class ScriptingInterceptorTest extends BaseFhirR4ForTesting {
 		cleanUp();
 	}
 
+	private boolean scriptLoaded() {
+		return !scriptingSvc.listCustomScripts().isEmpty();
+	}
+
 	@Test
 	void successfulCreateLoadsTheScript() throws Exception {
 		HttpResponse<String> response = ScriptJson.send(port, "POST", "Configuration", ScriptJson.scriptConfiguration(null), null);
 		assertEquals(201, response.statusCode(), response.body());
-		assertTrue(ScriptJson.loadedWithin(scriptingSvc, 10_000), "script not loaded after a successful create");
+		assertTrue(ScriptJson.within(10_000, this::scriptLoaded), "script not loaded after a successful create");
 	}
 
 	@Test
@@ -57,6 +61,6 @@ class ScriptingInterceptorTest extends BaseFhirR4ForTesting {
 		// URL id differs from the body id: HAPI rejects the PUT with 400 before storing anything.
 		HttpResponse<String> response = ScriptJson.send(port, "PUT", "Configuration/other", ScriptJson.scriptConfiguration("mine"), null);
 		assertEquals(400, response.statusCode(), response.body());
-		assertFalse(ScriptJson.loadedWithin(scriptingSvc, 2_000), "script loaded after a failed write");
+		assertFalse(ScriptJson.within(2_000, this::scriptLoaded), "script loaded after a failed write");
 	}
 }

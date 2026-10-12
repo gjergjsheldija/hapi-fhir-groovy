@@ -129,8 +129,9 @@ hapi:
 - With security ON, only callers with the admin scope can write `App` resources; with security OFF anyone can.
   Whoever can write Apps can make the server POST to any host, including internal services and cloud
   metadata endpoints. Restrict egress at the network level.
-- The admin-scope rule covers REST and Bundle writes only. Server-side code (e.g. Groovy scripts loaded via
-  `$load-script`) and `$expunge`/`$delete-expunge` (if enabled) are not covered by it.
+- The admin-scope rule covers REST and Bundle writes. Groovy scripts are gated by the same admin scope
+  (writing `Configuration` resources and `$load-script`/`$unload-script`/`$list-scripts`, see
+  [scripting](scripting.md#security)). `$expunge`/`$delete-expunge` (if enabled) are not covered by it.
 - `endpoint.secret` is returned on reads to anyone allowed to read `App` resources.
 - App calls bypass HAPI's interceptor chain: no BALP `AuditEvent`, consent or request-validation
   interceptors run for them. Apps that handle PHI must audit themselves.
