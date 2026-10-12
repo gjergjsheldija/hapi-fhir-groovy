@@ -10,6 +10,8 @@ import com.gjergjsheldija.security.token.AccessTokenValidation;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.IdType;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -23,6 +25,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -123,5 +126,17 @@ class AppProxyFilterUnitTest {
 			assertEquals(0, stub.calls.get());
 			assertNull(chain.getRequest(), "chain must not be invoked");
 		}
+	}
+
+	@ParameterizedTest
+	@ValueSource(ints = {0, -1, Integer.MAX_VALUE})
+	void rejectsUnsafeBodyLimits(int limit) {
+		AppRouteRegistry registry = registryWith("http://127.0.0.1:1", "$x", true);
+		IllegalArgumentException request = assertThrows(IllegalArgumentException.class, () -> new AppProxyFilter(registry,
+			provider(null), provider(null), false, "", Duration.ofSeconds(1), Duration.ofSeconds(1), FhirContext.forR4(), limit, 1024));
+		assertTrue(request.getMessage().contains("hapi.fhir.apps.max-request-bytes"), request.getMessage());
+		IllegalArgumentException response = assertThrows(IllegalArgumentException.class, () -> new AppProxyFilter(registry,
+			provider(null), provider(null), false, "", Duration.ofSeconds(1), Duration.ofSeconds(1), FhirContext.forR4(), 1024, limit));
+		assertTrue(response.getMessage().contains("hapi.fhir.apps.max-response-bytes"), response.getMessage());
 	}
 }

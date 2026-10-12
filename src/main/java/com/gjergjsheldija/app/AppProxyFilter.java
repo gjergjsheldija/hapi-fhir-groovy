@@ -60,8 +60,8 @@ public class AppProxyFilter extends OncePerRequestFilter {
 	public AppProxyFilter(AppRouteRegistry registry, ObjectProvider<AccessTokenValidation> tokenValidation,
 								 ObjectProvider<CorsInterceptor> corsInterceptor, boolean securityEnabled, String serverAddress, Duration connectTimeout, Duration requestTimeout,
 								 FhirContext fhirContext, int maxRequestBytes, int maxResponseBytes) {
-		this.maxRequestBytes = maxRequestBytes;
-		this.maxResponseBytes = maxResponseBytes;
+		this.maxRequestBytes = checkLimit("hapi.fhir.apps.max-request-bytes", maxRequestBytes);
+		this.maxResponseBytes = checkLimit("hapi.fhir.apps.max-response-bytes", maxResponseBytes);
 		this.registry = registry;
 		this.tokenValidation = tokenValidation;
 		this.corsInterceptor = corsInterceptor;
@@ -69,7 +69,16 @@ public class AppProxyFilter extends OncePerRequestFilter {
 		this.serverAddress = serverAddress;
 		this.requestTimeout = requestTimeout;
 		this.fhirContext = fhirContext;
-		this.httpClient = HttpClient.newBuilder().connectTimeout(connectTimeout).build();
+		// HTTP/1.1: no h2c upgrade attempt against plain-http Apps.
+		this.httpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).connectTimeout(connectTimeout).build();
+	}
+
+	/** The caps are read with readNBytes(limit + 1), so Integer.MAX_VALUE would overflow. */
+	private static int checkLimit(String key, int value) {
+		if (value <= 0 || value == Integer.MAX_VALUE) {
+			throw new IllegalArgumentException(key + " must be between 1 and " + (Integer.MAX_VALUE - 1) + ", was " + value);
+		}
+		return value;
 	}
 
 	@Override

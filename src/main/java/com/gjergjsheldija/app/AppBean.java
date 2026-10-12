@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.scheduling.TaskScheduler;
 
 import java.time.Duration;
@@ -58,9 +59,9 @@ public class AppBean {
 	}
 
 	@Bean
-	public AppValidationInterceptor appValidationInterceptor(AppRouteRegistry registry, IFhirResourceDao<App> appDao,
+	public AppValidationInterceptor appValidationInterceptor(IFhirResourceDao<App> appDao,
 																		 ObjectProvider<RestfulServer> restfulServer, IInterceptorService interceptorService) {
-		AppValidationInterceptor interceptor = new AppValidationInterceptor(fhirContext, registry, appDao, restfulServer);
+		AppValidationInterceptor interceptor = new AppValidationInterceptor(fhirContext, appDao, restfulServer);
 		// The JPA interceptor service sees every DAO write, including non-REST ones.
 		interceptorService.registerInterceptor(interceptor);
 		return interceptor;
@@ -86,6 +87,8 @@ public class AppBean {
 		FilterRegistrationBean<AppProxyFilter> registration = new FilterRegistrationBean<>(filter);
 		registration.setName("appProxyFilter");
 		registration.addUrlPatterns("/fhir/*");
+		// Before Spring's FormContentFilter (-9900), which would consume PUT/PATCH/DELETE form bodies.
+		registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 100);
 		return registration;
 	}
 }

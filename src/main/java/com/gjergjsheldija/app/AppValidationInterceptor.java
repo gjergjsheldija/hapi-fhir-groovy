@@ -90,14 +90,12 @@ public class AppValidationInterceptor {
 		"$validate-code");
 
 	private final FhirContext fhirContext;
-	private final AppRouteRegistry registry;
 	private final IFhirResourceDao<App> appDao;
 	private final ObjectProvider<RestfulServer> restfulServer;
 
-	public AppValidationInterceptor(FhirContext fhirContext, AppRouteRegistry registry, IFhirResourceDao<App> appDao,
+	public AppValidationInterceptor(FhirContext fhirContext, IFhirResourceDao<App> appDao,
 											  ObjectProvider<RestfulServer> restfulServer) {
 		this.fhirContext = fhirContext;
-		this.registry = registry;
 		this.appDao = appDao;
 		this.restfulServer = restfulServer;
 	}
@@ -212,8 +210,8 @@ public class AppValidationInterceptor {
 		}
 
 		if (App.STATUS_ACTIVE.equals(app.getStatus())) {
-			List<AppRoute> others = new ArrayList<>(registry.routes());
-			// The registry is a snapshot; also check stored Apps (same-transaction siblings, other nodes).
+			// Stored Apps only: the registry may be stale. Same-transaction siblings are checked in onTransaction().
+			List<AppRoute> others = new ArrayList<>();
 			List<App> stored = appDao.search(SearchParameterMap.newSynchronous(), SystemRequestDetails.forAllPartitions())
 				.getAllResources().stream()
 				.map(App.class::cast)

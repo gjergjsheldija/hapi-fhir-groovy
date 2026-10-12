@@ -10,9 +10,14 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.annotation.DirtiesContext;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
+import ca.uhn.fhir.rest.api.server.SystemRequestDetails;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 
+import org.hl7.fhir.r4.model.IdType;
+
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.stream.Stream;
 
 import static com.gjergjsheldija.app.AppJson.app;
@@ -27,6 +32,9 @@ class AppValidationInterceptorTest extends BaseFhirR4ForTesting {
 
 	@Autowired
 	AppRouteRegistry registry;
+
+	@Autowired
+	IFhirResourceDao<App> appDao;
 
 	@BeforeEach
 	void setUpClient() {
@@ -115,6 +123,26 @@ class AppValidationInterceptorTest extends BaseFhirR4ForTesting {
 	void updatingTheSameAppIsNotACollision() throws Exception {
 		assertEquals(201, AppJson.put(port, "same", app("same", "active", URL, null, op("o", "GET", "$x/{a}", false))).statusCode());
 		assertEquals(200, AppJson.put(port, "same", app("same", "active", "http://127.0.0.1:2", null, op("o", "GET", "$x/{a}", false))).statusCode());
+	}
+
+	@Test
+	void deletedAppViaRestDoesNotCollide() throws Exception {
+		assertEquals(201, AppJson.put(port, "gone", app("gone", "active", URL, null, op("o", "GET", "$x/{a}", false))).statusCode());
+		int deleteStatus = AppJson.send(port, "DELETE", "App/gone", null, null, null).statusCode();
+		assertTrue(deleteStatus == 200 || deleteStatus == 204, "delete returned " + deleteStatus);
+		HttpResponse<String> next = AppJson.put(port, "next", app("next", "active", URL, null, op("o", "GET", "$x/{a}", false)));
+		assertEquals(201, next.statusCode(), next.body());
+	}
+
+	@Test
+	void staleRegistryDoesNotCauseCollision() throws Exception {
+		assertEquals(201, AppJson.put(port, "gone", app("gone", "active", URL, null, op("o", "GET", "$x/{a}", false))).statusCode());
+		registry.refresh();
+		// A DAO delete fires no REST hook, so the registry keeps routing the deleted App until the next refresh.
+		appDao.delete(new IdType("App/gone"), new SystemRequestDetails());
+		assertTrue(registry.find("GET", List.of("$x", "1")).isPresent(), "precondition: registry is stale");
+		HttpResponse<String> next = AppJson.put(port, "next", app("next", "active", URL, null, op("o", "GET", "$x/{a}", false)));
+		assertEquals(201, next.statusCode(), next.body());
 	}
 
 	@Test

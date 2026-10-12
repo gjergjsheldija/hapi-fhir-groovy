@@ -113,6 +113,16 @@ class AppRouteRegistryTest extends BaseFhirR4ForTesting {
 	}
 
 	@Test
+	void transactionWithAppEntryRefreshesImmediately() throws Exception {
+		String bundle = """
+			{ "resourceType": "Bundle", "type": "transaction", "entry": [
+			  { "resource": %s, "request": { "method": "PUT", "url": "App/tx1" } } ] }""".formatted(
+			AppJson.app("tx1", "active", "http://127.0.0.1:1", null, AppJson.op("op1", "POST", "User/$tx", true)));
+		assertEquals(200, AppJson.send(port, "POST", "", "application/fhir+json", bundle, null).statusCode());
+		assertTrue(awaitRoute("POST", List.of("User", "$tx")));
+	}
+
+	@Test
 	void expungeAndRecreateWithSameIdUsesNewEndpoint() {
 		writeViaDao(app("same", "active", "http://127.0.0.1:1", "$x"));
 		registry.refresh();
