@@ -28,6 +28,9 @@ require a token with the admin scope `hapi.fhir.apps.admin-scope` (default `app:
 
 With security off (the default) anyone can manage scripts — the server is open by design.
 
+Not gated by the admin scope: `$expunge`/`$delete-expunge` (if enabled) and `$meta-add`/`$meta-delete` on
+`Configuration` resources.
+
 ## Storing a script
 
 Scripts are stored in the `Configuration` resource the following way :
