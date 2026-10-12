@@ -51,11 +51,11 @@ public class SecurityInterceptor extends AuthorizationInterceptor {
 	@Override
 	public List<IAuthRule> buildRuleList(RequestDetails theRequestDetails) {
 
-		logger.info("Accessing Resource : " + theRequestDetails.getRequestPath());
+		logger.debug("Accessing Resource : " + theRequestDetails.getRequestPath());
 
 		// in case of security not enabled, we return ok for everything
 		if (securityEnabled == false) {
-			logger.info("No security rules enabled, permission to access everything.");
+			logger.debug("No security rules enabled, permission to access everything.");
 			return createAdminRules();
 		}
 
