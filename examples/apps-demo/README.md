@@ -61,7 +61,6 @@ All steps matched.
 ```
 
 The script creates `App/demo.app` (and tries `App/evil.app`, which is rejected) and deletes only those on exit.
-Step 4 and 9b wait 1 s because routes change just after the write response is sent.
 
 ## With security enabled
 With `SECURITY_ENABLED=true`, writing Apps needs a token with the admin scope `app:admin`, and

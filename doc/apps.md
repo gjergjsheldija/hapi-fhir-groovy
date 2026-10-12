@@ -36,9 +36,9 @@ When `SECURITY_ENABLED=true`, creating, updating or deleting an App requires a t
 - Colliding Apps are rejected with 422, including two Apps within one transaction Bundle. Two routes collide
   when they are ambiguous (same method and equal-specificity overlapping paths); a more specific route
   still coexists with a less specific one.
-- REST writes to `App`, and transaction/batch Bundles containing `App` entries, refresh the routes
-  on the node that received them right after the response is sent (see #19). Other writes (DAO
-  calls, scripts) and other nodes pick changes up within `hapi.fhir.apps.refresh-ms` (default 30 s).
+- Writes to an `App` (REST, transaction/batch Bundle, or server-side) take effect on the node that
+  handled them before the response returns. Other nodes pick changes up within
+  `hapi.fhir.apps.refresh-ms` (default 30 s). `$expunge` triggers a refresh after it completes.
 - App routes can't be called from inside a transaction/batch Bundle: they are not FHIR interactions.
 - With `REQUEST_VALIDATION=true`, Bundles containing `App` entries are validated and may be
   rejected; only top-level `App` writes skip request validation.
