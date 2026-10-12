@@ -1,6 +1,7 @@
 package com.gjergjsheldija.app;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gjergjsheldija.security.token.AccessTokenValidation;
 import jakarta.servlet.FilterChain;
@@ -12,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.web.cors.DefaultCorsProcessor;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -39,6 +41,7 @@ public class AppProxyFilter extends OncePerRequestFilter {
 
 	private final AppRouteRegistry registry;
 	private final ObjectProvider<AccessTokenValidation> tokenValidation;
+	private final ObjectProvider<CorsInterceptor> corsInterceptor;
 	private final boolean securityEnabled;
 	private final String serverAddress;
 	private final Duration requestTimeout;
@@ -49,12 +52,13 @@ public class AppProxyFilter extends OncePerRequestFilter {
 	private final ObjectMapper mapper = new ObjectMapper();
 
 	public AppProxyFilter(AppRouteRegistry registry, ObjectProvider<AccessTokenValidation> tokenValidation,
-								 boolean securityEnabled, String serverAddress, Duration connectTimeout, Duration requestTimeout,
+								 ObjectProvider<CorsInterceptor> corsInterceptor, boolean securityEnabled, String serverAddress, Duration connectTimeout, Duration requestTimeout,
 								 FhirContext fhirContext, int maxRequestBytes, int maxResponseBytes) {
 		this.maxRequestBytes = maxRequestBytes;
 		this.maxResponseBytes = maxResponseBytes;
 		this.registry = registry;
 		this.tokenValidation = tokenValidation;
+		this.corsInterceptor = corsInterceptor;
 		this.securityEnabled = securityEnabled;
 		this.serverAddress = serverAddress;
 		this.requestTimeout = requestTimeout;
@@ -73,6 +77,12 @@ public class AppProxyFilter extends OncePerRequestFilter {
 		long start = System.nanoTime();
 		AppRoute route = match.get().route();
 		try {
+			// App responses bypass HAPI's CorsInterceptor, so apply the same CORS config here.
+			// On rejection the processor has already written the 403.
+			CorsInterceptor cors = corsInterceptor.getIfAvailable();
+			if (cors != null && !new DefaultCorsProcessor().processRequest(cors.getConfig(), request, response)) {
+				return;
+			}
 			if (securityEnabled && !route.isPublic() && !isAuthorized(request)) {
 				writeError(response, 401, "Missing or invalid access token");
 				return;
