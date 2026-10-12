@@ -35,6 +35,59 @@ public class AppValidationInterceptor {
 	private static final Set<String> CUSTOM_TYPES = Set.of("App", "Configuration");
 	private static final Set<String> RESERVED_FIRST_SEGMENTS = Set.of("metadata", "_history", "swagger-ui", "api-docs", "_search", ".well-known");
 
+	/** Standard operations an App may never claim, even when the feature is disabled in this deployment. */
+	private static final Set<String> RESERVED_OPERATIONS = Set.of(
+		"$apply",
+		"$apply-codesystem-delta-add",
+		"$apply-codesystem-delta-remove",
+		"$binary-access-read",
+		"$binary-access-write",
+		"$care-gaps",
+		"$closure",
+		"$collect-data",
+		"$convert",
+		"$data-requirements",
+		"$diff",
+		"$document",
+		"$evaluate-measure",
+		"$everything",
+		"$expand",
+		"$export",
+		"$expunge",
+		"$graphql",
+		"$hapi.fhir.add-package",
+		"$import",
+		"$install",
+		"$lastn",
+		"$lookup",
+		"$match",
+		"$mdm-clear",
+		"$mdm-create-link",
+		"$mdm-duplicate-golden-resources",
+		"$mdm-merge-golden-resources",
+		"$mdm-not-duplicate",
+		"$mdm-query-links",
+		"$mdm-submit",
+		"$mdm-update-link",
+		"$member-match",
+		"$meta",
+		"$meta-add",
+		"$meta-delete",
+		"$package",
+		"$populate",
+		"$process-message",
+		"$reindex",
+		"$reindex-terminology",
+		"$stats",
+		"$submit-data",
+		"$subsumes",
+		"$translate",
+		"$trigger-subscription",
+		"$uninstall",
+		"$upload-external-code-system",
+		"$validate",
+		"$validate-code");
+
 	private final FhirContext fhirContext;
 	private final AppRouteRegistry registry;
 	private final IFhirResourceDao<App> appDao;
@@ -188,7 +241,7 @@ public class AppValidationInterceptor {
 		}
 		for (int i = 0; i < Math.min(2, segments.size()); i++) {
 			String seg = segments.get(i);
-			if (seg.startsWith("$") && serverOps.contains(seg)) {
+			if (seg.startsWith("$") && (RESERVED_OPERATIONS.contains(seg) || serverOps.contains(seg))) {
 				return "path would shadow server operation " + seg;
 			}
 		}

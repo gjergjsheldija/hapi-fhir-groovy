@@ -109,18 +109,15 @@ public class AppRouteRegistry {
 					appRoutes.add(new AppRoute(op.getMethod(), AppRoute.parsePath(op.getPath()), appId, op.getId(),
 						op.isPublic(), app.getEndpoint().getUrl(), app.getEndpoint().getSecret()));
 				}
-				for (AppRoute route : appRoutes) {
-					for (AppRoute other : accepted) {
-						if (!other.appId().equals(appId) && other.collidesWith(route)) {
-							ourLog.warn("Skipping App {}: collides with App {} ({} {})", appId, other.appId(), other.method(), other.segments());
-							throw new IllegalStateException("collision");
-						}
-					}
+				AppRoute clash = appRoutes.stream()
+					.flatMap(route -> accepted.stream().filter(other -> !other.appId().equals(appId) && other.collidesWith(route)))
+					.findFirst().orElse(null);
+				if (clash != null) {
+					ourLog.warn("Skipping App {}: collides with App {} ({} {})", appId, clash.appId(), clash.method(), clash.segments());
+					continue;
 				}
 				accepted.addAll(appRoutes);
 				appRoutes.forEach(route -> byMethod.computeIfAbsent(route.method(), k -> new ArrayList<>()).add(route));
-			} catch (IllegalStateException e) {
-				// collision already logged
 			} catch (RuntimeException e) {
 				ourLog.warn("Skipping App {}: invalid definition ({}: {})", appId, e.getClass().getSimpleName(), e.getMessage());
 			}
