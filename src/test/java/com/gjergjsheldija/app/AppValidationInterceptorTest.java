@@ -9,6 +9,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.interceptor.api.IInterceptorService;
 import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
 import ca.uhn.fhir.rest.api.server.SystemRequestDetails;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
@@ -33,6 +34,9 @@ class AppValidationInterceptorTest extends BaseFhirR4ForTesting {
 
 	@Autowired
 	IFhirResourceDao<App> appDao;
+
+	@Autowired
+	IInterceptorService jpaInterceptorService;
 
 	@BeforeEach
 	void setUpClient() {
@@ -136,8 +140,13 @@ class AppValidationInterceptorTest extends BaseFhirR4ForTesting {
 	void staleRegistryDoesNotCauseCollision() throws Exception {
 		assertEquals(201, AppJson.put(port, "gone", app("gone", "active", URL, null, op("o", "GET", "$x/{a}", false))).statusCode());
 		registry.refresh();
-		// A DAO delete fires no REST hook, so the registry keeps routing the deleted App until the next refresh.
-		appDao.delete(new IdType("App/gone"), new SystemRequestDetails());
+		// Simulate a delete on another node: this node's registry keeps routing the deleted App until the next refresh.
+		jpaInterceptorService.unregisterInterceptor(registry);
+		try {
+			appDao.delete(new IdType("App/gone"), new SystemRequestDetails());
+		} finally {
+			jpaInterceptorService.registerInterceptor(registry);
+		}
 		assertTrue(registry.find("GET", List.of("$x", "1")).isPresent(), "precondition: registry is stale");
 		HttpResponse<String> next = AppJson.put(port, "next", app("next", "active", URL, null, op("o", "GET", "$x/{a}", false)));
 		assertEquals(201, next.statusCode(), next.body());

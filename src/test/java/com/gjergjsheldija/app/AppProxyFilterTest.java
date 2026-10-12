@@ -49,8 +49,43 @@ class AppProxyFilterTest extends BaseFhirR4ForTesting {
 			op("daily-patient-report", "GET", "Patient/$daily-report/{date}", false) + ","
 				+ op("register-user", "POST", "User/$register", true)));
 		assertTrue(put.statusCode() == 200 || put.statusCode() == 201, put.body());
-		// The registry refreshes after the response is sent; make the route visible deterministically.
-		registry.refresh();
+	}
+
+	@Test
+	void appIsCallableImmediatelyAfterRegistration() throws Exception {
+		for (int i = 0; i < 10; i++) {
+			String id = "fresh.app" + i;
+			assertEquals(201, AppJson.put(port, id, app(id, "active", stub.url(), null, op("op", "GET", "$fresh" + i, true))).statusCode());
+			HttpResponse<String> call = AppJson.send(port, "GET", "$fresh" + i, null, null, null);
+			assertEquals(200, call.statusCode(), "iteration " + i + ": " + call.body());
+		}
+		assertEquals(10, stub.calls.get());
+	}
+
+	@Test
+	void appIsGoneImmediatelyAfterDelete() throws Exception {
+		for (int i = 0; i < 10; i++) {
+			String id = "doomed.app" + i;
+			assertEquals(201, AppJson.put(port, id, app(id, "active", stub.url(), null, op("op", "GET", "$doomed" + i, true))).statusCode());
+			int deleteStatus = AppJson.send(port, "DELETE", "App/" + id, null, null, null).statusCode();
+			assertTrue(deleteStatus == 200 || deleteStatus == 204, "delete returned " + deleteStatus);
+			HttpResponse<String> call = AppJson.send(port, "GET", "$doomed" + i, null, null, null);
+			assertNotEquals(200, call.statusCode(), "iteration " + i + ": " + call.body());
+		}
+		assertEquals(0, stub.calls.get());
+	}
+
+	@Test
+	void appFromTransactionBundleIsCallableImmediately() throws Exception {
+		String bundle = """
+			{ "resourceType": "Bundle", "type": "transaction", "entry": [
+			  { "resource": %s, "request": { "method": "POST", "url": "App" } } ] }""".formatted(
+			app("ignored", "active", stub.url(), null, op("op", "GET", "$from-bundle", true)).replace("\"id\": \"ignored\",", ""));
+		HttpResponse<String> tx = AppJson.send(port, "POST", "", "application/fhir+json", bundle, null);
+		assertEquals(200, tx.statusCode(), tx.body());
+		HttpResponse<String> call = AppJson.send(port, "GET", "$from-bundle", null, null, null);
+		assertEquals(200, call.statusCode(), call.body());
+		assertEquals(1, stub.calls.get());
 	}
 
 	@Test
@@ -92,7 +127,6 @@ class AppProxyFilterTest extends BaseFhirR4ForTesting {
 		HttpResponse<String> put = AppJson.put(port, "myorg.putapp", app("myorg.putapp", "active", stub.url(), null,
 			op("update-profile", "PUT", "$profile", false)));
 		assertEquals(201, put.statusCode(), put.body());
-		registry.refresh();
 		// Spring's FormContentFilter would otherwise consume PUT/PATCH/DELETE form bodies first.
 		AppJson.send(port, "PUT", "$profile", "application/x-www-form-urlencoded", "a=1&b=2", null);
 		JsonNode env = mapper.readTree(stub.lastBody);

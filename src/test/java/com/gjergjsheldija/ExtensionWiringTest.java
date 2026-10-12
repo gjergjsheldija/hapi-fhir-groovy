@@ -80,6 +80,7 @@ class ExtensionWiringTest {
 		assertTrue(registration.getOrder() < OrderedFormContentFilter.DEFAULT_ORDER, "must run before FormContentFilter");
 		assertTrue(jpaInterceptorService.getAllRegisteredInterceptors().stream().anyMatch(AppValidationInterceptor.class::isInstance));
 		assertTrue(restfulServer.getInterceptorService().getAllRegisteredInterceptors().stream().anyMatch(AppRouteRegistry.class::isInstance));
+		assertTrue(jpaInterceptorService.getAllRegisteredInterceptors().stream().anyMatch(AppRouteRegistry.class::isInstance));
 	}
 
 	// A stdio MCP transport would read System.in in production (and steals Surefire's fork channel in tests).

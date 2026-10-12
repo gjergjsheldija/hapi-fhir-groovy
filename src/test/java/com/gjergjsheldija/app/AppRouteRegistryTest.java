@@ -2,6 +2,7 @@ package com.gjergjsheldija.app;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
+import ca.uhn.fhir.jpa.dao.tx.IHapiTransactionService;
 import ca.uhn.fhir.rest.api.server.SystemRequestDetails;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import com.gjergjsheldija.util.BaseFhirR4ForTesting;
@@ -10,13 +11,16 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.TaskScheduler;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 class AppRouteRegistryTest extends BaseFhirR4ForTesting {
 
@@ -25,6 +29,9 @@ class AppRouteRegistryTest extends BaseFhirR4ForTesting {
 
 	@Autowired
 	AppRouteRegistry registry;
+
+	@Autowired
+	IHapiTransactionService txService;
 
 	@BeforeEach
 	void setUpClient() {
@@ -51,32 +58,34 @@ class AppRouteRegistryTest extends BaseFhirR4ForTesting {
 		return app;
 	}
 
-	/** REST writes refresh the registry right after the response is sent; wait for that (refresh-ms is 1 h here). */
-	private boolean awaitRoute(String method, List<String> segments) throws InterruptedException {
-		long deadline = System.currentTimeMillis() + 2000;
-		while (registry.find(method, segments).isEmpty() && System.currentTimeMillis() < deadline) {
-			Thread.sleep(20);
-		}
-		return registry.find(method, segments).isPresent();
-	}
-
-	/** Simulates a write made on another node: DAO call, no REST request, so no local hook fires. */
 	private void writeViaDao(App app) {
 		appDao.update(app, new SystemRequestDetails());
 	}
 
 	@Test
-	void refreshPicksUpWritesFromOtherNodes() {
-		writeViaDao(app("a1", "active", "http://127.0.0.1:1", "Patient/$r/{date}"));
-		assertTrue(registry.find("GET", List.of("Patient", "$r", "2024-01-01")).isEmpty(), "not visible before refresh");
+	void daoWriteRefreshesImmediately() {
+		writeViaDao(app("dao1", "active", "http://127.0.0.1:1", "$dao"));
+		assertTrue(registry.find("GET", List.of("$dao")).isPresent(), "visible without refresh()");
+		// A second write on the same thread must not trip over the first write's after-commit refresh.
+		writeViaDao(app("dao2", "active", "http://127.0.0.1:1", "$dao2"));
+		assertTrue(registry.find("GET", List.of("$dao2")).isPresent());
+	}
 
-		assertTrue(registry.refresh());
-		AppRouteRegistry.Match match = registry.find("GET", List.of("Patient", "$r", "2024-01-01")).orElseThrow();
+	@Test
+	void refreshPicksUpWritesFromOtherNodes() {
+		// Another node's registry: same database, but this node's storage hooks don't reach it.
+		AppRouteRegistry otherNode = new AppRouteRegistry(appDao, txService, mock(TaskScheduler.class), Duration.ofHours(1));
+		otherNode.refresh();
+		writeViaDao(app("a1", "active", "http://127.0.0.1:1", "Patient/$r/{date}"));
+		assertTrue(otherNode.find("GET", List.of("Patient", "$r", "2024-01-01")).isEmpty(), "not visible before refresh");
+
+		assertTrue(otherNode.refresh());
+		AppRouteRegistry.Match match = otherNode.find("GET", List.of("Patient", "$r", "2024-01-01")).orElseThrow();
 		assertEquals("a1", match.route().appId());
 		assertEquals("op1", match.route().operationId());
 		assertEquals(Map.of("date", "2024-01-01"), match.routeParams());
 
-		assertFalse(registry.refresh(), "unchanged data must not rebuild");
+		assertFalse(otherNode.refresh(), "unchanged data must not rebuild");
 	}
 
 	@Test
@@ -107,7 +116,7 @@ class AppRouteRegistryTest extends BaseFhirR4ForTesting {
 	void restWriteRefreshesImmediately() throws Exception {
 		AppJson.put(port, "rest1", AppJson.app("rest1", "active", "http://127.0.0.1:1", null,
 			AppJson.op("op1", "POST", "User/$register", true)));
-		assertTrue(awaitRoute("POST", List.of("User", "$register")));
+		assertTrue(registry.find("POST", List.of("User", "$register")).isPresent());
 	}
 
 	@Test
@@ -117,7 +126,7 @@ class AppRouteRegistryTest extends BaseFhirR4ForTesting {
 			  { "resource": %s, "request": { "method": "PUT", "url": "App/tx1" } } ] }""".formatted(
 			AppJson.app("tx1", "active", "http://127.0.0.1:1", null, AppJson.op("op1", "POST", "User/$tx", true)));
 		assertEquals(200, AppJson.send(port, "POST", "", "application/fhir+json", bundle, null).statusCode());
-		assertTrue(awaitRoute("POST", List.of("User", "$tx")));
+		assertTrue(registry.find("POST", List.of("User", "$tx")).isPresent());
 	}
 
 	@Test
