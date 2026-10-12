@@ -10,7 +10,9 @@ import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import com.gjergjsheldija.configuration.Configuration;
 import com.gjergjsheldija.security.token.AccessTokenValidation;
 import com.gjergjsheldija.util.BaseFhirR4ForTesting;
+import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.r4.model.SearchParameter;
 import org.hl7.fhir.r4.model.StringType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,6 +82,19 @@ class ScriptingSecurityTest extends BaseFhirR4ForTesting {
 		ourClient = ourCtx.newRestfulGenericClient("http://localhost:" + port + "/fhir/");
 		// The server does not register ScriptingInterceptor itself (not in custom-interceptor-classes), so do it here.
 		restfulServer.registerInterceptor(scriptingInterceptor);
+
+		// $load-script looks the script up by name (string) and type/status (token): install those search parameters.
+		// Like ConfigurationTest, but type/status must be TOKEN - ScriptingProvider searches them with TokenParam (HAPI-1257 otherwise).
+		for (String code : new String[]{"name", "type", "status"}) {
+			SearchParameter searchParameter = new SearchParameter();
+			searchParameter.setCode(code)
+				.addBase("Configuration")
+				.setStatus(Enumerations.PublicationStatus.ACTIVE)
+				.setType("name".equals(code) ? Enumerations.SearchParamType.STRING : Enumerations.SearchParamType.TOKEN)
+				.setExpression(code);
+			ourClient.create().resource(searchParameter).execute();
+		}
+		mySearchParamRegistry.forceRefresh();
 	}
 
 	@AfterEach
@@ -168,10 +183,9 @@ class ScriptingSecurityTest extends BaseFhirR4ForTesting {
 		assertEquals(403, ScriptJson.send(port, "GET", "Configuration/$list-scripts", null, null).statusCode());
 
 		assertEquals(200, ScriptJson.send(port, "GET", "Configuration/$list-scripts", null, "Bearer admin-token").statusCode());
-		// Admins pass the guard. (Whether the stored script is then found is the operation's own business, not tested here.)
 		load = ScriptJson.send(port, "POST", "Configuration/$load-script", LOAD_PARAMS, "Bearer admin-token");
 		assertEquals(200, load.statusCode(), load.body());
-		assertFalse(load.body().contains("requires scope"), load.body());
+		assertTrue(anyScriptLoaded(), "admin $load-script did not load the script: " + load.body());
 		assertEquals(200, ScriptJson.send(port, "POST", "Configuration/$unload-script", LOAD_PARAMS, "Bearer admin-token").statusCode());
 	}
 
