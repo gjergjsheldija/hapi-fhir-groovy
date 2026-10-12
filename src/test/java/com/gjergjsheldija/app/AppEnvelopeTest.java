@@ -47,6 +47,16 @@ class AppEnvelopeTest {
 	}
 
 	@Test
+	void cookieHeaderIsForwarded() throws Exception {
+		MockHttpServletRequest request = new MockHttpServletRequest("GET", "/fhir/x");
+		request.addHeader("Cookie", "a=b");
+		request.addHeader("X-Other", "y");
+		JsonNode headers = build(request, null).get("request").get("headers");
+		assertEquals("a=b", headers.get("cookie").asText());
+		assertEquals("y", headers.get("x-other").asText());
+	}
+
+	@Test
 	void jsonBodyIsEmbeddedAsJson() throws Exception {
 		JsonNode env = build(new MockHttpServletRequest("POST", "/fhir/x"), "{\"resourceType\":\"Parameters\"}");
 		assertEquals("Parameters", env.get("request").get("resource").get("resourceType").asText());

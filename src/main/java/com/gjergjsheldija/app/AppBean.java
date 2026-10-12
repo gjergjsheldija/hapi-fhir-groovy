@@ -74,10 +74,12 @@ public class AppBean {
 		@Value("${hapi.fhir.security.enabled:false}") boolean securityEnabled,
 		@Value("${hapi.fhir.server_address:}") String serverAddress,
 		@Value("${hapi.fhir.apps.connect-timeout-ms:5000}") long connectTimeoutMs,
-		@Value("${hapi.fhir.apps.request-timeout-ms:30000}") long requestTimeoutMs) {
+		@Value("${hapi.fhir.apps.request-timeout-ms:30000}") long requestTimeoutMs,
+		@Value("${hapi.fhir.apps.max-request-bytes:10485760}") int maxRequestBytes,
+		@Value("${hapi.fhir.apps.max-response-bytes:10485760}") int maxResponseBytes) {
 		// Created here, not as its own bean, so Spring Boot doesn't also map it to /*.
 		AppProxyFilter filter = new AppProxyFilter(registry, tokenValidation, securityEnabled, serverAddress,
-			Duration.ofMillis(connectTimeoutMs), Duration.ofMillis(requestTimeoutMs), fhirContext);
+			Duration.ofMillis(connectTimeoutMs), Duration.ofMillis(requestTimeoutMs), fhirContext, maxRequestBytes, maxResponseBytes);
 		FilterRegistrationBean<AppProxyFilter> registration = new FilterRegistrationBean<>(filter);
 		registration.setName("appProxyFilter");
 		registration.addUrlPatterns("/fhir/*");

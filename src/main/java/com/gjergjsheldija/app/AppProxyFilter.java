@@ -15,6 +15,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpConnectTimeoutException;
@@ -24,6 +25,7 @@ import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -42,11 +44,15 @@ public class AppProxyFilter extends OncePerRequestFilter {
 	private final Duration requestTimeout;
 	private final HttpClient httpClient;
 	private final FhirContext fhirContext;
+	private final int maxRequestBytes;
+	private final int maxResponseBytes;
 	private final ObjectMapper mapper = new ObjectMapper();
 
 	public AppProxyFilter(AppRouteRegistry registry, ObjectProvider<AccessTokenValidation> tokenValidation,
 								 boolean securityEnabled, String serverAddress, Duration connectTimeout, Duration requestTimeout,
-								 FhirContext fhirContext) {
+								 FhirContext fhirContext, int maxRequestBytes, int maxResponseBytes) {
+		this.maxRequestBytes = maxRequestBytes;
+		this.maxResponseBytes = maxResponseBytes;
 		this.registry = registry;
 		this.tokenValidation = tokenValidation;
 		this.securityEnabled = securityEnabled;
@@ -78,6 +84,9 @@ public class AppProxyFilter extends OncePerRequestFilter {
 	}
 
 	private boolean isAuthorized(HttpServletRequest request) {
+		if (Collections.list(request.getHeaders("Authorization")).size() > 1) {
+			return false;
+		}
 		String authorization = request.getHeader("Authorization");
 		AccessTokenValidation validator = tokenValidation.getIfAvailable();
 		if (validator == null) {
@@ -98,8 +107,23 @@ public class AppProxyFilter extends OncePerRequestFilter {
 
 	private void forward(AppRouteRegistry.Match match, HttpServletRequest request, HttpServletResponse response) throws IOException {
 		AppRoute route = match.route();
-		byte[] body = request.getInputStream().readAllBytes();
-		byte[] envelope = AppEnvelope.build(mapper, route, match.routeParams(), request, body, baseUrl(request));
+		if (request.getContentLengthLong() > maxRequestBytes) {
+			writeError(response, 413, "Request body exceeds hapi.fhir.apps.max-request-bytes");
+			return;
+		}
+		byte[] body = request.getInputStream().readNBytes(maxRequestBytes + 1);
+		if (body.length > maxRequestBytes) {
+			writeError(response, 413, "Request body exceeds hapi.fhir.apps.max-request-bytes");
+			return;
+		}
+		byte[] envelope;
+		try {
+			envelope = AppEnvelope.build(mapper, route, match.routeParams(), request, body, baseUrl(request));
+		} catch (IllegalArgumentException e) {
+			// URLDecoder rejects malformed percent-encoding in the query string.
+			writeError(response, 400, "Malformed query string");
+			return;
+		}
 
 		HttpRequest.Builder outbound = HttpRequest.newBuilder(URI.create(route.endpointUrl()))
 			.timeout(requestTimeout)
@@ -110,9 +134,9 @@ public class AppProxyFilter extends OncePerRequestFilter {
 			outbound.header("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8)));
 		}
 
-		HttpResponse<byte[]> appResponse;
+		HttpResponse<InputStream> appResponse;
 		try {
-			appResponse = httpClient.send(outbound.build(), HttpResponse.BodyHandlers.ofByteArray());
+			appResponse = httpClient.send(outbound.build(), HttpResponse.BodyHandlers.ofInputStream());
 		} catch (HttpConnectTimeoutException e) {
 			writeError(response, 502, "App " + route.appId() + " is unreachable");
 			return;
@@ -128,9 +152,16 @@ public class AppProxyFilter extends OncePerRequestFilter {
 			return;
 		}
 
-		response.setStatus(appResponse.statusCode());
-		appResponse.headers().firstValue("Content-Type").ifPresent(response::setContentType);
-		response.getOutputStream().write(appResponse.body());
+		try (InputStream in = appResponse.body()) {
+			byte[] appBody = in.readNBytes(maxResponseBytes + 1);
+			if (appBody.length > maxResponseBytes) {
+				writeError(response, 502, "App " + route.appId() + " response exceeds hapi.fhir.apps.max-response-bytes");
+				return;
+			}
+			response.setStatus(appResponse.statusCode());
+			appResponse.headers().firstValue("Content-Type").ifPresent(response::setContentType);
+			response.getOutputStream().write(appBody);
+		}
 	}
 
 	private String baseUrl(HttpServletRequest request) {
@@ -145,7 +176,8 @@ public class AppProxyFilter extends OncePerRequestFilter {
 		OperationOutcome outcome = new OperationOutcome();
 		outcome.addIssue()
 			.setSeverity(OperationOutcome.IssueSeverity.ERROR)
-			.setCode(status == 401 ? OperationOutcome.IssueType.LOGIN : OperationOutcome.IssueType.TRANSIENT)
+			.setCode(status == 401 ? OperationOutcome.IssueType.LOGIN
+					: status == 400 || status == 413 ? OperationOutcome.IssueType.INVALID : OperationOutcome.IssueType.TRANSIENT)
 			.setDiagnostics(message);
 		response.setStatus(status);
 		response.setContentType("application/fhir+json");
@@ -154,7 +186,8 @@ public class AppProxyFilter extends OncePerRequestFilter {
 
 	private void log(HttpServletRequest request, HttpServletResponse response, AppRoute route, long startNanos) {
 		try {
-			MDC.put("uri", request.getRequestURI());
+			// Route template, not the raw URI: the URI may carry patient identifiers.
+			MDC.put("uri", "/fhir/" + String.join("/", route.segments()));
 			MDC.put("method", request.getMethod());
 			MDC.put("status", String.valueOf(response.getStatus()));
 			MDC.put("latency", String.valueOf((System.nanoTime() - startNanos) / 1_000_000));

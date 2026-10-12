@@ -52,7 +52,16 @@ Every matching request becomes a `POST` to `endpoint.url` with
 }
 ```
 
-The app's status code, `Content-Type` and body are returned to the client as-is.
+All request headers are forwarded to the App, including the user's `Authorization` and `Cookie`.
+
+The App's status code, `Content-Type` and body are returned to the client. Other response headers
+(e.g. `Set-Cookie`, `Location`) are dropped, and redirects are not followed.
+
+## Limits
+
+Request bodies and App response bodies are capped by `hapi.fhir.apps.max-request-bytes` and
+`hapi.fhir.apps.max-response-bytes` (default 10 MB each). Exceeding the request cap returns 413,
+exceeding the response cap returns 502.
 
 ## Minimal app (Python)
 
@@ -81,6 +90,8 @@ Check the `Authorization` header against your secret before trusting the call.
 | Situation | Status |
 |---|---|
 | Missing/invalid token on a non-public operation (`SECURITY_ENABLED=true`) | 401 |
+| Malformed query string | 400 |
+| Request body over `max-request-bytes` | 413 |
 | Invalid App resource | 422 |
 | App unreachable | 502 |
 | App slower than `hapi.fhir.apps.request-timeout-ms` | 504 |
@@ -94,6 +105,8 @@ hapi:
       refresh-ms: 30000
       connect-timeout-ms: 5000
       request-timeout-ms: 30000
+      max-request-bytes: 10485760
+      max-response-bytes: 10485760
 ```
 
 ## Security notes (accepted risks)
@@ -101,3 +114,5 @@ hapi:
 - Anyone allowed to write `App` resources can make the server POST to any host, including
   internal services and cloud metadata endpoints. Restrict egress at the network level.
 - `endpoint.secret` is returned on reads to anyone allowed to read `App` resources.
+- App calls bypass HAPI's interceptor chain: no BALP `AuditEvent`, consent or request-validation
+  interceptors run for them. Apps that handle PHI must audit themselves.

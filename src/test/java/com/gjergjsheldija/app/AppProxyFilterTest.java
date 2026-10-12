@@ -50,6 +50,8 @@ class AppProxyFilterTest extends BaseFhirR4ForTesting {
 			op("daily-patient-report", "GET", "Patient/$daily-report/{date}", false) + ","
 				+ op("register-user", "POST", "User/$register", true)));
 		assertTrue(put.statusCode() == 200 || put.statusCode() == 201, put.body());
+		// The registry refreshes after the response is sent; make the route visible deterministically.
+		registry.refresh();
 	}
 
 	@Test
@@ -131,6 +133,39 @@ class AppProxyFilterTest extends BaseFhirR4ForTesting {
 	void coreFhirIsUnaffected() throws Exception {
 		register("active", stub.url());
 		assertEquals(200, AppJson.send(port, "GET", "Patient", null, null, null).statusCode());
+		assertEquals(0, stub.calls.get());
+	}
+
+	@Test
+	void oversizedRequestBodyGives413() throws Exception {
+		register("active", stub.url());
+		HttpResponse<String> response = AppJson.send(port, "POST", "User/$register", "text/plain", "x".repeat(2048), null);
+		assertEquals(413, response.statusCode(), response.body());
+		assertTrue(response.body().contains("OperationOutcome"), response.body());
+		assertEquals(0, stub.calls.get());
+	}
+
+	@Test
+	void oversizedAppResponseGives502() throws Exception {
+		register("active", stub.url());
+		stub.body = "x".repeat(2048);
+		HttpResponse<String> response = AppJson.send(port, "POST", "User/$register", null, null, null);
+		assertEquals(502, response.statusCode(), response.body());
+		assertTrue(response.body().contains("exceeds"), response.body());
+	}
+
+	@Test
+	void malformedQueryStringGives400() throws Exception {
+		register("active", stub.url());
+		// java.net.URI refuses "%zz", so speak raw HTTP.
+		String raw;
+		try (java.net.Socket socket = new java.net.Socket("localhost", port)) {
+			socket.getOutputStream().write(("POST /fhir/User/$register?a=%zz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\nContent-Length: 0\r\n\r\n")
+				.getBytes(StandardCharsets.UTF_8));
+			raw = new String(socket.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+		}
+		assertTrue(raw.startsWith("HTTP/1.1 400"), raw);
+		assertTrue(raw.contains("OperationOutcome"), raw);
 		assertEquals(0, stub.calls.get());
 	}
 }

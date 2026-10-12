@@ -432,6 +432,8 @@ hapi:
       refresh-ms: 30000              # how often each node re-reads App resources (picks up changes from other nodes)
       connect-timeout-ms: 5000       # connecting to an App's endpoint.url
       request-timeout-ms: 30000      # waiting for an App's response; exceeded -> 504
+      max-request-bytes: 10485760    # request body cap (10 MB); exceeded -> 413
+      max-response-bytes: 10485760   # App response body cap (10 MB); exceeded -> 502
     
     # store_meta_source_information: NONE
     # bundle_batch_pool_size: 10
