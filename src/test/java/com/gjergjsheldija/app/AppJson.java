@@ -31,11 +31,11 @@ final class AppJson {
 	}
 
 	static HttpResponse<String> put(int port, String id, String json) throws IOException, InterruptedException {
-		HttpRequest request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + "/fhir/App/" + id))
-			.header("Content-Type", "application/fhir+json")
-			.PUT(HttpRequest.BodyPublishers.ofString(json))
-			.build();
-		return CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+		return put(port, id, json, null);
+	}
+
+	static HttpResponse<String> put(int port, String id, String json, String authorization) throws IOException, InterruptedException {
+		return send(port, "PUT", "App/" + id, "application/fhir+json", json, authorization);
 	}
 
 	static HttpResponse<String> send(int port, String method, String pathAndQuery, String contentType, String body, String authorization)

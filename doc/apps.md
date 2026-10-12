@@ -20,6 +20,10 @@ PUT /fhir/App/myorg.myapp
 }
 ```
 
+When `SECURITY_ENABLED=true`, creating, updating or deleting an App requires a token with the scope
+`hapi.fhir.apps.admin-scope` (default `app:admin`) in its `scope`/`scp` claim or Keycloak
+`realm_access.roles`; other callers get 403. Reads are not restricted.
+
 - `status`: `active` routes the operations; `inactive` keeps the App stored but unrouted.
 - `path`: relative to `/fhir/`, `{name}` segments become route params. If the first segment is a
   resource type, the second must start with `$` (Apps can't shadow `GET /Patient/123`).
@@ -100,6 +104,7 @@ Check the `Authorization` header against your secret before trusting the call.
 | Missing/invalid token on a non-public operation (`SECURITY_ENABLED=true`) | 401 |
 | Malformed query string | 400 |
 | Request body over `max-request-bytes` | 413 |
+| Writing an App without the admin scope (`SECURITY_ENABLED=true`) | 403 |
 | Invalid App resource | 422 |
 | App unreachable | 502 |
 | App response larger than `max-response-bytes` | 502 |
@@ -116,12 +121,16 @@ hapi:
       request-timeout-ms: 30000
       max-request-bytes: 10485760
       max-response-bytes: 10485760
+      admin-scope: app:admin
 ```
 
 ## Security notes (accepted risks)
 
-- Anyone allowed to write `App` resources can make the server POST to any host, including
-  internal services and cloud metadata endpoints. Restrict egress at the network level.
+- With security ON, only callers with the admin scope can write `App` resources; with security OFF anyone can.
+  Whoever can write Apps can make the server POST to any host, including internal services and cloud
+  metadata endpoints. Restrict egress at the network level.
+- The admin-scope rule covers REST and Bundle writes only. Server-side code (e.g. Groovy scripts loaded via
+  `$load-script`) and `$expunge`/`$delete-expunge` (if enabled) are not covered by it.
 - `endpoint.secret` is returned on reads to anyone allowed to read `App` resources.
 - App calls bypass HAPI's interceptor chain: no BALP `AuditEvent`, consent or request-validation
   interceptors run for them. Apps that handle PHI must audit themselves.

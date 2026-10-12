@@ -6,22 +6,30 @@ import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
+import ca.uhn.fhir.rest.api.Constants;
+import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.api.server.SystemRequestDetails;
 import ca.uhn.fhir.rest.server.ResourceBinding;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.method.BaseMethodBinding;
 import ca.uhn.fhir.rest.server.method.OperationMethodBinding;
+import ca.uhn.fhir.rest.server.exceptions.AuthenticationException;
+import ca.uhn.fhir.rest.server.exceptions.ForbiddenOperationException;
 import ca.uhn.fhir.rest.server.exceptions.UnprocessableEntityException;
+import com.gjergjsheldija.security.token.AccessTokenValidation;
 import org.hl7.fhir.instance.model.api.IBaseBundle;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -93,25 +101,83 @@ public class AppValidationInterceptor {
 	private final IFhirResourceDao<App> appDao;
 	private final ObjectProvider<RestfulServer> restfulServer;
 
+	private final boolean securityEnabled;
+	private final ObjectProvider<AccessTokenValidation> tokenValidation;
+	private final String adminScope;
+
 	public AppValidationInterceptor(FhirContext fhirContext, IFhirResourceDao<App> appDao,
-											  ObjectProvider<RestfulServer> restfulServer) {
+											  ObjectProvider<RestfulServer> restfulServer, boolean securityEnabled,
+											  ObjectProvider<AccessTokenValidation> tokenValidation, String adminScope) {
+		if (adminScope == null || adminScope.isBlank()) {
+			throw new IllegalArgumentException("hapi.fhir.apps.admin-scope must not be blank");
+		}
 		this.fhirContext = fhirContext;
 		this.appDao = appDao;
 		this.restfulServer = restfulServer;
+		this.securityEnabled = securityEnabled;
+		this.tokenValidation = tokenValidation;
+		this.adminScope = adminScope;
 	}
 
 	@Hook(Pointcut.STORAGE_PRESTORAGE_RESOURCE_CREATED)
-	public void onCreate(IBaseResource theResource) {
+	public void onCreate(IBaseResource theResource, RequestDetails theRequestDetails) {
 		if (theResource instanceof App app) {
+			requireAdminScope(theRequestDetails);
 			validate(app);
 		}
 	}
 
 	@Hook(Pointcut.STORAGE_PRESTORAGE_RESOURCE_UPDATED)
-	public void onUpdate(IBaseResource theOldResource, IBaseResource theNewResource) {
+	public void onUpdate(IBaseResource theOldResource, IBaseResource theNewResource, RequestDetails theRequestDetails) {
 		if (theNewResource instanceof App app) {
+			requireAdminScope(theRequestDetails);
 			validate(app);
 		}
+	}
+
+	@Hook(Pointcut.STORAGE_PRESTORAGE_RESOURCE_DELETED)
+	public void onDelete(IBaseResource theResource, RequestDetails theRequestDetails) {
+		if (theResource instanceof App) {
+			requireAdminScope(theRequestDetails);
+		}
+	}
+
+	/** With security on, REST writers need the admin scope; internal (system) writes are trusted. */
+	private void requireAdminScope(RequestDetails requestDetails) {
+		if (!securityEnabled || requestDetails == null || requestDetails instanceof SystemRequestDetails) {
+			return;
+		}
+		ForbiddenOperationException forbidden = new ForbiddenOperationException("Writing App resources requires scope " + adminScope);
+		String authorization = requestDetails.getHeader(Constants.HEADER_AUTHORIZATION);
+		AccessTokenValidation validator = tokenValidation.getIfAvailable();
+		if (validator == null || authorization == null || !authorization.startsWith(Constants.HEADER_AUTHORIZATION_VALPREFIX_BEARER)) {
+			throw forbidden;
+		}
+		Jwt jwt;
+		try {
+			jwt = validator.validateToken(authorization);
+		} catch (AuthenticationException e) {
+			throw forbidden;
+		}
+		if (!hasScope(jwt)) {
+			throw forbidden;
+		}
+	}
+
+	private boolean hasScope(Jwt jwt) {
+		Object scope = jwt.getClaim("scope");
+		if (scope instanceof String s && List.of(s.split("\\s+")).contains(adminScope)) {
+			return true;
+		}
+		Object scp = jwt.getClaim("scp");
+		if (scp instanceof String s && List.of(s.split("\\s+")).contains(adminScope)) {
+			return true;
+		}
+		if (scp instanceof Collection<?> c && c.contains(adminScope)) {
+			return true;
+		}
+		return jwt.getClaim("realm_access") instanceof Map<?, ?> realm
+			&& realm.get("roles") instanceof Collection<?> roles && roles.contains(adminScope);
 	}
 
 	/**

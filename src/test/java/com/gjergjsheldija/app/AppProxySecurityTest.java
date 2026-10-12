@@ -34,10 +34,10 @@ class AppProxySecurityTest extends BaseFhirR4ForTesting {
 		@Bean(name = "myAccessTokenValidation")
 		AccessTokenValidation accessTokenValidation() {
 			JwtDecoder decoder = token -> {
-				if (!"good-token".equals(token)) {
+				if (!"good-token".equals(token) && !"admin-token".equals(token)) {
 					throw new BadJwtException("bad token");
 				}
-				return Jwt.withTokenValue(token).header("alg", "none").subject("tester")
+				return Jwt.withTokenValue(token).header("alg", "none").subject("tester").claim("scope", "app:admin")
 					.issuedAt(Instant.now().minusSeconds(60)).expiresAt(Instant.now().plusSeconds(3600)).build();
 			};
 			return new AccessTokenValidation(decoder, jwt -> OAuth2TokenValidatorResult.success());
@@ -56,7 +56,7 @@ class AppProxySecurityTest extends BaseFhirR4ForTesting {
 		ourClient = ourCtx.newRestfulGenericClient("http://localhost:" + port + "/fhir/");
 		stub = new StubApp();
 		AppJson.put(port, "sec", app("sec", "active", stub.url(), null,
-			op("private", "GET", "$private", false) + "," + op("open", "GET", "$open", true)));
+			op("private", "GET", "$private", false) + "," + op("open", "GET", "$open", true)), "Bearer admin-token");
 	}
 
 	@AfterEach
