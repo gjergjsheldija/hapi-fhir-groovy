@@ -5,9 +5,11 @@ import ca.uhn.fhir.interceptor.api.IInterceptorService;
 import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
 import ca.uhn.fhir.jpa.dao.JpaResourceDao;
 import ca.uhn.fhir.rest.server.RestfulServer;
+import com.gjergjsheldija.security.token.AccessTokenValidation;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.TaskScheduler;
@@ -61,5 +63,24 @@ public class AppBean {
 		// The JPA interceptor service sees every DAO write, including non-REST ones.
 		interceptorService.registerInterceptor(interceptor);
 		return interceptor;
+	}
+
+	@Bean
+	public FilterRegistrationBean<AppProxyFilter> appProxyFilterRegistration(
+		AppRouteRegistry registry,
+		// Two AccessTokenValidation beans exist in production (the @Component and SecurityBean's
+		// myAccessTokenValidation); SecurityInterceptor uses the latter, so must we.
+		@Qualifier("myAccessTokenValidation") ObjectProvider<AccessTokenValidation> tokenValidation,
+		@Value("${hapi.fhir.security.enabled:false}") boolean securityEnabled,
+		@Value("${hapi.fhir.server_address:}") String serverAddress,
+		@Value("${hapi.fhir.apps.connect-timeout-ms:5000}") long connectTimeoutMs,
+		@Value("${hapi.fhir.apps.request-timeout-ms:30000}") long requestTimeoutMs) {
+		// Created here, not as its own bean, so Spring Boot doesn't also map it to /*.
+		AppProxyFilter filter = new AppProxyFilter(registry, tokenValidation, securityEnabled, serverAddress,
+			Duration.ofMillis(connectTimeoutMs), Duration.ofMillis(requestTimeoutMs), fhirContext);
+		FilterRegistrationBean<AppProxyFilter> registration = new FilterRegistrationBean<>(filter);
+		registration.setName("appProxyFilter");
+		registration.addUrlPatterns("/fhir/*");
+		return registration;
 	}
 }
