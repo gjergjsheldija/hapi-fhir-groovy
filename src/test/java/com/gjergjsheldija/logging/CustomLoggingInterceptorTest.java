@@ -13,7 +13,6 @@
  import org.skyscreamer.jsonassert.JSONCompareMode;
  import org.slf4j.MDC;
  import org.springframework.boot.test.web.server.LocalServerPort;
- import org.springframework.test.annotation.DirtiesContext;
 
  import static org.junit.Assert.assertEquals;
  import static org.junit.Assert.assertFalse;
@@ -30,7 +29,6 @@
   * @since 2025-07-01
   */
 
- @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
  public class CustomLoggingInterceptorTest extends BaseFhirR4ForTesting {
 
  	@LocalServerPort

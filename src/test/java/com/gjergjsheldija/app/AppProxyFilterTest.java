@@ -7,7 +7,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.annotation.DirtiesContext;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 
@@ -22,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class AppProxyFilterTest extends BaseFhirR4ForTesting {
 
 	private final ObjectMapper mapper = new ObjectMapper();

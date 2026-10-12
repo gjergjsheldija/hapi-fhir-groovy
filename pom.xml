@@ -609,6 +609,12 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <!--
+                    Parent default is 0.6C (9 JVMs on a 15-core laptop). Each JVM pays a cold HAPI
+                    start and builds its own Spring contexts, so fewer, reused forks share more
+                    cached contexts; 3-4 forks measured fastest locally and suit 4-vCPU CI runners.
+                    -->
+                    <forkCount>4</forkCount>
                     <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
                 </configuration>
             </plugin>
@@ -620,6 +626,8 @@
                 <version>${maven.failsafe.version}</version>
                 <configuration>
                     <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                    <!-- Each IT boots its own server in its own JVM (reuseForks=false); run two at once. -->
+                    <forkCount>2</forkCount>
                     <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
                 </configuration>
                 <executions>

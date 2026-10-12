@@ -12,7 +12,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.annotation.DirtiesContext;
 
 /**
  * FHIR Server
@@ -26,7 +25,6 @@ import org.springframework.test.annotation.DirtiesContext;
  * @since 2025-06-06
  */
 
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class ConfigurationTest extends BaseFhirR4ForTesting {
 
 	@Autowired

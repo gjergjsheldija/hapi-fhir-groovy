@@ -8,7 +8,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.annotation.DirtiesContext;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
 import ca.uhn.fhir.rest.api.server.SystemRequestDetails;
@@ -25,7 +24,6 @@ import static com.gjergjsheldija.app.AppJson.op;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class AppValidationInterceptorTest extends BaseFhirR4ForTesting {
 
 	private static final String URL = "http://127.0.0.1:1";

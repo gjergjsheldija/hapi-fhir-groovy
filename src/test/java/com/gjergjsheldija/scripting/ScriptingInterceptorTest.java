@@ -11,7 +11,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.annotation.DirtiesContext;
 
 import java.net.http.HttpResponse;
 import java.util.Map;
@@ -21,7 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Security off: a script Configuration is loaded only when its write succeeded. */
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class ScriptingInterceptorTest extends BaseFhirR4ForTesting {
 
 	@Autowired
