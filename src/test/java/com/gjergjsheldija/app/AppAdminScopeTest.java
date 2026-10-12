@@ -5,6 +5,7 @@ import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import ca.uhn.fhir.rest.api.server.SystemRequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
+import com.gjergjsheldija.security.AdminScopeGuard;
 import com.gjergjsheldija.security.token.AccessTokenValidation;
 import com.gjergjsheldija.util.BaseFhirR4ForTesting;
 import org.junit.jupiter.api.AfterEach;
@@ -159,7 +160,7 @@ class AppAdminScopeTest extends BaseFhirR4ForTesting {
 	@Test
 	void blankAdminScopeFailsAtStartup() {
 		var e = org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
-			() -> new AppValidationInterceptor(ourCtx, appDao, null, true, null, " "));
+			() -> new AdminScopeGuard(true, null, " "));
 		assertTrue(e.getMessage().contains("hapi.fhir.apps.admin-scope"));
 	}
 }

@@ -27,6 +27,9 @@ type can be of :
 - configuration
 - script
 
+With `SECURITY_ENABLED=true`, creating, updating or deleting `Configuration` resources requires the admin scope
+(`hapi.fhir.apps.admin-scope`, default `app:admin`), see [scripting security](scripting.md#security).
+
 ## Usage
 
 In order to use it the following SearchParameters must be in place :

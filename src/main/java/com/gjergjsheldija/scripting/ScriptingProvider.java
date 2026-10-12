@@ -21,6 +21,7 @@ import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.param.StringParam;
 import ca.uhn.fhir.rest.param.TokenParam;
 import com.gjergjsheldija.configuration.Configuration;
+import com.gjergjsheldija.security.AdminScopeGuard;
 import jakarta.annotation.PostConstruct;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.CodeableConcept;
@@ -28,7 +29,6 @@ import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.StringType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -45,19 +45,20 @@ public class ScriptingProvider {
 		SCHEDULED_SCRIPT
 	}
 
-	@Autowired
-	@Lazy
-	ProviderSvcImpl providerSvc;
+	private final ProviderSvcImpl providerSvc;
+	private final InterceptorSvcImpl interceptorSvc;
+	private final ScheduledSvcImpl scheduledSvc;
+	private final DaoRegistry daoRegistry;
+	private final AdminScopeGuard adminScopeGuard;
 
-	@Autowired
-	InterceptorSvcImpl interceptorSvc;
-
-	@Autowired
-	ScheduledSvcImpl scheduledSvc;
-
-
-	@Autowired
-	DaoRegistry daoRegistry;
+	public ScriptingProvider(@Lazy ProviderSvcImpl providerSvc, InterceptorSvcImpl interceptorSvc, ScheduledSvcImpl scheduledSvc,
+									 DaoRegistry daoRegistry, AdminScopeGuard adminScopeGuard) {
+		this.providerSvc = providerSvc;
+		this.interceptorSvc = interceptorSvc;
+		this.scheduledSvc = scheduledSvc;
+		this.daoRegistry = daoRegistry;
+		this.adminScopeGuard = adminScopeGuard;
+	}
 
 	@PostConstruct
 	public void init() {
@@ -67,7 +68,9 @@ public class ScriptingProvider {
 
 	// TODO : add canonical URL
 	@Operation(name = "list-scripts", idempotent = true, type = Configuration.class)
-	public OperationOutcome listScripts() {
+	public OperationOutcome listScripts(RequestDetails theRequestDetails) {
+		// Scripts run with full server rights: only admins may see or manage them.
+		adminScopeGuard.requireAdmin(theRequestDetails, "$list-scripts");
 		List<Object> providerList = providerSvc.listCustomScripts();
 		List<Object> interceptorList = interceptorSvc.listCustomScripts();
 		List<Object> scheduletList = scheduledSvc.listCustomScripts();
@@ -88,6 +91,7 @@ public class ScriptingProvider {
 		@OperationParam(name = "name", min = 1, max = 1, typeName = "string") StringType name,
 		RequestDetails theRequestDetails
 	) {
+		adminScopeGuard.requireAdmin(theRequestDetails, "$load-script");
 
 		String storedScript = "";
 		try {
@@ -112,6 +116,7 @@ public class ScriptingProvider {
 		@OperationParam(name = "name", min = 1, max = 1, typeName = "string") StringType name,
 		RequestDetails theRequestDetails
 	) {
+		adminScopeGuard.requireAdmin(theRequestDetails, "$unload-script");
 
 		String storedScript = "";
 		try {

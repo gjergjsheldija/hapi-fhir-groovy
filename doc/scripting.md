@@ -13,6 +13,24 @@ restart it. Scrips are contained in a single file, which is stored in the `Confi
 :warning: **Note** : Those scripts are not persisted though application restarts and do not store their state.
 Meaning they have to be restarted each time the server restarts
 
+## Security
+
+Scripts run inside the server with full rights (DAO access, network, ...), so only admins may manage them.
+With `SECURITY_ENABLED=true`:
+
+- creating, updating or deleting any `Configuration` resource (scripts and plain configuration entries, via REST
+  or in a Bundle), and
+- calling `$load-script`, `$unload-script` and `$list-scripts`
+
+require a token with the admin scope `hapi.fhir.apps.admin-scope` (default `app:admin`; the same scope that guards
+`App` writes). The scope is read from the `scope`/`scp` claim or Keycloak's `realm_access.roles`. Other callers get
+`403`. Internal (system) calls are not checked.
+
+With security off (the default) anyone can manage scripts — the server is open by design.
+
+Not gated by the admin scope: `$expunge`/`$delete-expunge` (if enabled) and `$meta-add`/`$meta-delete` on
+`Configuration` resources.
+
 ## Storing a script
 
 Scripts are stored in the `Configuration` resource the following way :
@@ -56,6 +74,9 @@ class PatientCreated {
     }
 }
 ```
+
+Writing a script `Configuration` does **not** load it: scripts are loaded only via `$load-script` (admin-only
+when security is on, see [Security](#security)), and after a script change call `$load-script` again.
 
 The server provides the following API to load, unload and list scripts.
 
