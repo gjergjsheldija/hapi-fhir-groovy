@@ -37,6 +37,10 @@ public class AppRouteRegistry {
 	private static final Set<RestOperationTypeEnum> WRITES = EnumSet.of(
 		RestOperationTypeEnum.CREATE, RestOperationTypeEnum.UPDATE, RestOperationTypeEnum.DELETE, RestOperationTypeEnum.PATCH);
 
+	private static final Set<RestOperationTypeEnum> EXTENDED_OPS = EnumSet.of(
+		RestOperationTypeEnum.EXTENDED_OPERATION_SERVER, RestOperationTypeEnum.EXTENDED_OPERATION_TYPE,
+		RestOperationTypeEnum.EXTENDED_OPERATION_INSTANCE);
+
 	public record Match(AppRoute route, Map<String, String> routeParams) {
 	}
 
@@ -95,12 +99,15 @@ public class AppRouteRegistry {
 			try {
 				List<AppRoute> appRoutes = new ArrayList<>();
 				for (App.AppOperationComponent op : app.getOperation()) {
+					if (op.getMethod() == null || op.getMethod().isBlank()) {
+						throw new IllegalArgumentException("operation " + op.getId() + ": method is required");
+					}
 					appRoutes.add(new AppRoute(op.getMethod(), AppRoute.parsePath(op.getPath()), appId, op.getId(),
 						op.isPublic(), app.getEndpoint().getUrl(), app.getEndpoint().getSecret()));
 				}
 				appRoutes.forEach(route -> byMethod.computeIfAbsent(route.method(), k -> new ArrayList<>()).add(route));
 			} catch (RuntimeException e) {
-				ourLog.warn("Skipping App {}: invalid definition ({})", appId, e.getMessage());
+				ourLog.warn("Skipping App {}: invalid definition ({}: {})", appId, e.getClass().getSimpleName(), e.getMessage());
 			}
 		}
 		Map<String, List<AppRoute>> sorted = new HashMap<>();
@@ -112,7 +119,12 @@ public class AppRouteRegistry {
 
 	@Hook(Pointcut.SERVER_PROCESSING_COMPLETED_NORMALLY)
 	public void onRequestCompleted(RequestDetails theRequestDetails) {
-		if ("App".equals(theRequestDetails.getResourceName()) && WRITES.contains(theRequestDetails.getRestOperationType())) {
+		RestOperationTypeEnum type = theRequestDetails.getRestOperationType();
+		boolean appWrite = "App".equals(theRequestDetails.getResourceName()) && WRITES.contains(type);
+		// Bundles have no resource name and may delete/deactivate Apps; $expunge removes them.
+		boolean bundle = type == RestOperationTypeEnum.TRANSACTION || type == RestOperationTypeEnum.BATCH;
+		boolean expunge = EXTENDED_OPS.contains(type) && "$expunge".equals(theRequestDetails.getOperation());
+		if (appWrite || bundle || expunge) {
 			refreshQuietly();
 		}
 	}

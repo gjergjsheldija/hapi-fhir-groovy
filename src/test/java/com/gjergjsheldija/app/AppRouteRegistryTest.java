@@ -114,6 +114,18 @@ class AppRouteRegistryTest extends BaseFhirR4ForTesting {
 	}
 
 	@Test
+	void nullOrBlankMethodSkipsAppOthersStillRoute() {
+		App noMethod = app("nomethod", "active", "http://127.0.0.1:1", "$a");
+		noMethod.getOperation().get(0).setMethod(null);
+		App blankMethod = app("blank", "active", "http://127.0.0.1:1", "$b");
+		blankMethod.getOperation().get(0).setMethod(" ");
+		App good = app("good", "active", "http://127.0.0.1:2", "$ok");
+		Map<String, List<AppRoute>> routes = AppRouteRegistry.buildRoutes(List.of(noMethod, blankMethod, good));
+		assertEquals(1, routes.size());
+		assertEquals("good", routes.get("GET").get(0).appId());
+	}
+
+	@Test
 	void invalidStoredAppIsSkippedOthersStillRoute() {
 		App bad = app("bad", "active", "http://127.0.0.1:1", "a//b");
 		App good = app("good", "active", "http://127.0.0.1:2", "$ok");
