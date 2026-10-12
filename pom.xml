@@ -599,6 +599,20 @@
                 </executions>
             </plugin>
 
+            <!--
+            Surefire/failsafe talk to forked JVMs over stdin/stdout by default. Anything in a test
+            context that reads System.in (e.g. Spring AI's MCP stdio server) steals the fork's
+            commands, so test classes silently never run and the build hangs. A TCP channel makes
+            the fork protocol independent of stdin.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
+                </configuration>
+            </plugin>
+
             <!-- This is to run the integration tests -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -606,6 +620,7 @@
                 <version>${maven.failsafe.version}</version>
                 <configuration>
                     <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                    <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
                 </configuration>
                 <executions>
                     <execution>

@@ -1,4 +1,11 @@
 spring:
+  # Without this, Spring AI auto-configures an MCP *stdio* server that reads System.in.
+  # Surefire talks to its forked JVMs over System.in, so that reader steals the
+  # run-class / shutdown commands: test classes never run and forks never exit.
+  ai:
+    mcp:
+      server:
+        enabled: false
   main:
     allow-circular-references: true
     allow-bean-definition-overriding: true

@@ -12,6 +12,8 @@ import com.gjergjsheldija.scripting.ScriptingProvider;
 import com.gjergjsheldija.security.SecurityInterceptor;
 import com.gjergjsheldija.terminology.TerminologyCapabilityInterceptor;
 import com.gjergjsheldija.validation.CustomRequestValidatingInterceptor;
+import io.modelcontextprotocol.server.transport.HttpServletStreamableServerTransportProvider;
+import io.modelcontextprotocol.spec.McpServerTransportProviderBase;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,6 +24,7 @@ import org.springframework.test.annotation.DirtiesContext;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -77,5 +80,13 @@ class ExtensionWiringTest {
 		assertTrue(registration.getOrder() < OrderedFormContentFilter.DEFAULT_ORDER, "must run before FormContentFilter");
 		assertTrue(jpaInterceptorService.getAllRegisteredInterceptors().stream().anyMatch(AppValidationInterceptor.class::isInstance));
 		assertTrue(restfulServer.getInterceptorService().getAllRegisteredInterceptors().stream().anyMatch(AppRouteRegistry.class::isInstance));
+	}
+
+	// A stdio MCP transport would read System.in in production (and steals Surefire's fork channel in tests).
+	@Test
+	void mcpIsServedOnlyOverStreamableHttp() {
+		var transports = applicationContext.getBeansOfType(McpServerTransportProviderBase.class).values();
+		assertEquals(1, transports.size(), "MCP transports: " + transports);
+		assertTrue(transports.iterator().next() instanceof HttpServletStreamableServerTransportProvider, "MCP transports: " + transports);
 	}
 }
