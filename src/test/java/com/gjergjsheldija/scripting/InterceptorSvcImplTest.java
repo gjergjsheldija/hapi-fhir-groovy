@@ -85,6 +85,7 @@ public class InterceptorSvcImplTest extends BaseFhirR4ForTesting {
 	@Test
 	void testLoadUnloadScriptingInterceptors() {
 		loadSourceCode();
+		int before = interceptorService.getAllRegisteredInterceptors().size();
 		interceptorSvcImpl.loadCustomScript("PatientCreated", "package scripting\n" +
 			"\n" +
 			"import ca.uhn.fhir.interceptor.api.Hook\n" +
@@ -102,11 +103,11 @@ public class InterceptorSvcImplTest extends BaseFhirR4ForTesting {
 			"}");
 
 		List<Object> loadedInterceptors = interceptorService.getAllRegisteredInterceptors();
-		assert (loadedInterceptors.size() == 2);
+		assert (loadedInterceptors.size() == before + 1);
 
 		interceptorSvcImpl.unloadCustomScript("PatientCreated");
 		loadedInterceptors = interceptorService.getAllRegisteredInterceptors();
-		assert (loadedInterceptors.size() == 1);
+		assert (loadedInterceptors.size() == before);
 	}
 
 	void loadSourceCode() throws IOException {
