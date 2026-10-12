@@ -160,11 +160,12 @@ class AppRouteRegistryFailureTest {
 			assertEquals(1, syncs.size(), "one synchronization per transaction");
 			syncs.forEach(TransactionSynchronization::afterCommit);
 			syncs.forEach(sync -> sync.afterCompletion(TransactionSynchronization.STATUS_COMMITTED));
+			assertTrue(TransactionSynchronizationManager.getResourceMap().isEmpty(), "dedupe key must be unbound");
 		} finally {
 			TransactionSynchronizationManager.clearSynchronization();
+			TransactionSynchronizationManager.unbindResourceIfPossible(registry); // in case an assertion failed first
 		}
 		verify(dao, times(1)).search(any(SearchParameterMap.class), any(RequestDetails.class));
-		assertTrue(TransactionSynchronizationManager.getResourceMap().isEmpty(), "dedupe key must be unbound");
 	}
 
 	@Test
@@ -174,11 +175,12 @@ class AppRouteRegistryFailureTest {
 			registry.onCreated(validApp());
 			TransactionSynchronizationManager.getSynchronizations()
 				.forEach(sync -> sync.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+			assertTrue(TransactionSynchronizationManager.getResourceMap().isEmpty(), "dedupe key must be unbound");
 		} finally {
 			TransactionSynchronizationManager.clearSynchronization();
+			TransactionSynchronizationManager.unbindResourceIfPossible(registry); // in case an assertion failed first
 		}
 		verify(dao, never()).search(any(SearchParameterMap.class), any(RequestDetails.class));
-		assertTrue(TransactionSynchronizationManager.getResourceMap().isEmpty(), "dedupe key must be unbound");
 	}
 
 	@Test
@@ -191,6 +193,7 @@ class AppRouteRegistryFailureTest {
 			assertTrue(TransactionSynchronizationManager.getSynchronizations().isEmpty());
 		} finally {
 			TransactionSynchronizationManager.clearSynchronization();
+			TransactionSynchronizationManager.unbindResourceIfPossible(registry); // in case an assertion failed first
 		}
 	}
 }
