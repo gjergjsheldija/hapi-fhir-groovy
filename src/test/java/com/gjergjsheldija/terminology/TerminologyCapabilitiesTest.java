@@ -12,7 +12,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
-import org.springframework.test.annotation.DirtiesContext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -30,7 +29,6 @@ import static org.mockito.Mockito.when;
  * @since 2025-08-26
  */
 
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 public class TerminologyCapabilitiesTest extends BaseFhirR4ForTesting {
 
 	@Mock

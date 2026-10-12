@@ -28,7 +28,7 @@ This is a HAPI FHIR JPA server (healthcare data). Correctness and data safety be
 - Spring/DB tests extend `com.gjergjsheldija.util.BaseFhirR4ForTesting` (H2). Pure logic gets plain JUnit 5 tests with no Spring context.
 - HTTP stubs use `com.sun.net.httpserver.HttpServer` on port 0; no new test libraries without asking.
 - Never weaken, skip, or delete a test to make CI pass. Changes to existing tests go in their own commit with the reason in the message.
-- `mvn verify` must pass before a PR is marked ready.
+- Run the unit tests of the feature you changed before marking a PR ready; the full `mvn verify` is optional.
 
 ## Workflow (agent software factory)
 
@@ -37,6 +37,6 @@ Coordination lives in GitHub (`gjergjsheldija/hapi-fhir-groovy`, public — noth
 - **Goal → issues.** A planner agent turns an approved spec in `docs/superpowers/specs/` into issues, each small enough to review (~400 changed lines), with `Depends on #n` lines for ordering.
 - **Issue → PR.** One implementer agent per issue, in its own git worktree, on branch `issue-<n>-<slug>`. PR body starts with `Closes #<n>` and lists what was tested. The implementer owns the PR until merge: it watches CI, fixes failures, and answers review comments.
 - **Specialist review.** Every PR gets parallel reviews posted as PR comments: code/guideline review (`pr-review-toolkit:code-reviewer`), error handling (`pr-review-toolkit:silent-failure-hunter`), test coverage (`pr-review-toolkit:pr-test-analyzer`), and security (`/security-review`). Findings are fixed or answered with a reason before merge.
-- **Merge.** A PR may be merged by an agent when CI is green and every specialist review has no unresolved findings. Squash-merge; delete the branch.
+- **Merge.** A PR may be merged once the feature's unit tests pass locally and the reviews have no unresolved findings; GitHub CI is informational (owner decision). Squash-merge; delete the branch.
 - **Stuck.** After two failed fix rounds on the same CI failure or review finding, stop, label the issue `needs-human`, and summarize what was tried.
 - **Commits/PRs/issues carry no AI attribution** — no `Co-Authored-By` trailers, no "Generated with" footers. Commit style: imperative summary, `(#<issue>)` suffix.

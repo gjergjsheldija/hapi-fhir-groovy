@@ -8,8 +8,7 @@ import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import ca.uhn.fhir.rest.server.exceptions.ResourceGoneException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import com.gjergjsheldija.configuration.Configuration;
-import com.gjergjsheldija.security.token.AccessTokenValidation;
-import com.gjergjsheldija.util.BaseFhirR4ForTesting;
+import com.gjergjsheldija.util.SecurityEnabledFhirR4ForTesting;
 import org.hl7.fhir.r4.model.Enumerations;
 import org.hl7.fhir.r4.model.IdType;
 import org.hl7.fhir.r4.model.SearchParameter;
@@ -18,50 +17,18 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
-import org.springframework.security.oauth2.jwt.BadJwtException;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.TestPropertySource;
 
 import java.net.http.HttpResponse;
-import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Security on: managing scripts (Configuration writes and the script operations) needs the admin scope. */
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@TestPropertySource(properties = {
-	"hapi.fhir.security.enabled=true",
-	// as in production application.yaml
-	"hapi.fhir.custom-provider-classes=com.gjergjsheldija.scripting.ScriptingProvider"})
-@Import(ScriptingSecurityTest.TokenConfig.class)
-class ScriptingSecurityTest extends BaseFhirR4ForTesting {
+class ScriptingSecurityTest extends SecurityEnabledFhirR4ForTesting {
 
 	private static final String LOAD_PARAMS = """
 		{ "resourceType": "Parameters", "parameter": [ { "name": "name", "valueString": "PatientCreated" } ] }""";
-
-	// Deliberately not @TestConfiguration: that is a @Component and would be component-scanned into other test contexts.
-	static class TokenConfig {
-		@Bean(name = "myAccessTokenValidation")
-		AccessTokenValidation accessTokenValidation() {
-			JwtDecoder decoder = token -> {
-				Jwt.Builder jwt = Jwt.withTokenValue(token).header("alg", "none").subject("tester")
-					.issuedAt(Instant.now().minusSeconds(60)).expiresAt(Instant.now().plusSeconds(3600));
-				return switch (token) {
-					case "admin-token" -> jwt.claim("scope", "openid app:admin").build();
-					case "user-token" -> jwt.claim("scope", "openid").build();
-					default -> throw new BadJwtException("bad token");
-				};
-			};
-			return new AccessTokenValidation(decoder, jwt -> OAuth2TokenValidatorResult.success());
-		}
-	}
 
 	@Autowired
 	IInterceptorService jpaInterceptorService;

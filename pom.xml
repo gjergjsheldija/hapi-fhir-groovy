@@ -352,11 +352,6 @@
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
-            <artifactId>testcontainers-elasticsearch</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
@@ -599,6 +594,26 @@
                 </executions>
             </plugin>
 
+            <!--
+            Surefire/failsafe talk to forked JVMs over stdin/stdout by default. Anything in a test
+            context that reads System.in (e.g. Spring AI's MCP stdio server) steals the fork's
+            commands, so test classes silently never run and the build hangs. A TCP channel makes
+            the fork protocol independent of stdin.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!--
+                    Parent default is 0.6C (9 JVMs on a 15-core laptop). Each JVM pays a cold HAPI
+                    start and builds its own Spring contexts, so fewer, reused forks share more
+                    cached contexts; 3-4 forks measured fastest locally and suit 4-vCPU CI runners.
+                    -->
+                    <forkCount>4</forkCount>
+                    <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
+                </configuration>
+            </plugin>
+
             <!-- This is to run the integration tests -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -606,6 +621,9 @@
                 <version>${maven.failsafe.version}</version>
                 <configuration>
                     <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                    <!-- Each IT boots its own server in its own JVM (reuseForks=false); run two at once. -->
+                    <forkCount>2</forkCount>
+                    <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
                 </configuration>
                 <executions>
                     <execution>

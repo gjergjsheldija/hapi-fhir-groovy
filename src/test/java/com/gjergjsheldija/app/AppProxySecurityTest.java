@@ -1,48 +1,19 @@
 package com.gjergjsheldija.app;
 
-import com.gjergjsheldija.security.token.AccessTokenValidation;
-import com.gjergjsheldija.util.BaseFhirR4ForTesting;
+import com.gjergjsheldija.util.SecurityEnabledFhirR4ForTesting;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
-import org.springframework.security.oauth2.jwt.BadJwtException;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.TestPropertySource;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
-
-import java.time.Instant;
 
 import static com.gjergjsheldija.app.AppJson.app;
 import static com.gjergjsheldija.app.AppJson.op;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@TestPropertySource(properties = "hapi.fhir.security.enabled=true")
-@Import(AppProxySecurityTest.TokenConfig.class)
-class AppProxySecurityTest extends BaseFhirR4ForTesting {
-
-	// Deliberately not @TestConfiguration: that is a @Component and would be component-scanned into other test contexts.
-	static class TokenConfig {
-		@Bean(name = "myAccessTokenValidation")
-		AccessTokenValidation accessTokenValidation() {
-			JwtDecoder decoder = token -> {
-				if (!"good-token".equals(token) && !"admin-token".equals(token)) {
-					throw new BadJwtException("bad token");
-				}
-				return Jwt.withTokenValue(token).header("alg", "none").subject("tester").claim("scope", "app:admin")
-					.issuedAt(Instant.now().minusSeconds(60)).expiresAt(Instant.now().plusSeconds(3600)).build();
-			};
-			return new AccessTokenValidation(decoder, jwt -> OAuth2TokenValidatorResult.success());
-		}
-	}
+class AppProxySecurityTest extends SecurityEnabledFhirR4ForTesting {
 
 	private StubApp stub;
 

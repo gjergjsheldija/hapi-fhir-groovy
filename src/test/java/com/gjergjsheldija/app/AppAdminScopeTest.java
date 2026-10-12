@@ -6,53 +6,18 @@ import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
 import ca.uhn.fhir.rest.api.server.SystemRequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import com.gjergjsheldija.security.AdminScopeGuard;
-import com.gjergjsheldija.security.token.AccessTokenValidation;
-import com.gjergjsheldija.util.BaseFhirR4ForTesting;
+import com.gjergjsheldija.util.SecurityEnabledFhirR4ForTesting;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
-import org.springframework.security.oauth2.jwt.BadJwtException;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.TestPropertySource;
-
-import java.time.Instant;
-import java.util.List;
-import java.util.Map;
 
 import static com.gjergjsheldija.app.AppJson.app;
 import static com.gjergjsheldija.app.AppJson.op;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@TestPropertySource(properties = "hapi.fhir.security.enabled=true")
-@Import(AppAdminScopeTest.TokenConfig.class)
-class AppAdminScopeTest extends BaseFhirR4ForTesting {
-
-	// Deliberately not @TestConfiguration: that is a @Component and would be component-scanned into other test contexts.
-	static class TokenConfig {
-		@Bean(name = "myAccessTokenValidation")
-		AccessTokenValidation accessTokenValidation() {
-			JwtDecoder decoder = token -> {
-				Jwt.Builder jwt = Jwt.withTokenValue(token).header("alg", "none").subject("tester")
-					.issuedAt(Instant.now().minusSeconds(60)).expiresAt(Instant.now().plusSeconds(3600));
-				return switch (token) {
-					case "admin-token" -> jwt.claim("scope", "openid app:admin").build();
-					case "kc-admin-token" -> jwt.claim("realm_access", Map.of("roles", List.of("app:admin"))).build();
-					case "near-token" -> jwt.claim("scope", "app:admin-readonly app:administrator").build();
-					case "user-token" -> jwt.claim("scope", "openid").build();
-					default -> throw new BadJwtException("bad token");
-				};
-			};
-			return new AccessTokenValidation(decoder, jwt -> OAuth2TokenValidatorResult.success());
-		}
-	}
+class AppAdminScopeTest extends SecurityEnabledFhirR4ForTesting {
 
 	@Autowired
 	IFhirResourceDao<App> appDao;
