@@ -22,6 +22,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -137,7 +138,7 @@ public class AppValidationInterceptor {
 				try {
 					AppRoute route = new AppRoute(op.getMethod(), AppRoute.parsePath(op.getPath()), appId, op.getId(), op.isPublic(), null, null);
 					for (AppRoute other : seen) {
-						if (!other.appId().equals(appId) && other.collidesWith(route)) {
+						if (!Objects.equals(other.appId(), appId) && other.collidesWith(route)) {
 							errors.add("App " + appId + " operation " + route.operationId() + " collides with App " + other.appId()
 								+ " operation " + other.operationId());
 						}
@@ -216,12 +217,12 @@ public class AppValidationInterceptor {
 			List<App> stored = appDao.search(SearchParameterMap.newSynchronous(), SystemRequestDetails.forAllPartitions())
 				.getAllResources().stream()
 				.map(App.class::cast)
-				.filter(a -> App.STATUS_ACTIVE.equals(a.getStatus()) && !appId.equals(a.getIdElement().getIdPart()))
+				.filter(a -> App.STATUS_ACTIVE.equals(a.getStatus()) && !Objects.equals(appId, a.getIdElement().getIdPart()))
 				.toList();
 			AppRouteRegistry.buildRoutes(stored).values().forEach(others::addAll);
 			for (AppRoute mine : ownRoutes) {
 				for (AppRoute other : others) {
-					if (!other.appId().equals(appId) && other.collidesWith(mine)) {
+					if (!Objects.equals(other.appId(), appId) && other.collidesWith(mine)) {
 						errors.add("operation " + mine.operationId() + " collides with App " + other.appId()
 							+ " operation " + other.operationId());
 					}
@@ -230,7 +231,7 @@ public class AppValidationInterceptor {
 		}
 
 		if (!errors.isEmpty()) {
-			throw new UnprocessableEntityException("Invalid App " + appId + ": " + String.join("; ", errors));
+			throw new UnprocessableEntityException("Invalid App " + (appId == null ? "(new)" : appId) + ": " + String.join("; ", errors));
 		}
 	}
 

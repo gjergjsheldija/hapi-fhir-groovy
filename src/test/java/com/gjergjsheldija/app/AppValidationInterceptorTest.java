@@ -100,6 +100,18 @@ class AppValidationInterceptorTest extends BaseFhirR4ForTesting {
 	}
 
 	@Test
+	void createWithServerAssignedIdIsCheckedAgainstOtherApps() throws Exception {
+		assertEquals(201, AppJson.put(port, "first", app("first", "active", URL, null, op("o", "GET", "$x/{a}", false))).statusCode());
+		HttpResponse<String> ok = AppJson.send(port, "POST", "App", "application/fhir+json",
+			app("new1", "active", URL, null, op("o", "GET", "$y", false)).replace("\"id\": \"new1\",", ""), null);
+		assertEquals(201, ok.statusCode(), ok.body());
+		HttpResponse<String> clash = AppJson.send(port, "POST", "App", "application/fhir+json",
+			app("new2", "active", URL, null, op("o", "GET", "$x/{b}", false)).replace("\"id\": \"new2\",", ""), null);
+		assertEquals(422, clash.statusCode(), clash.body());
+		assertTrue(clash.body().contains("collides"), clash.body());
+	}
+
+	@Test
 	void updatingTheSameAppIsNotACollision() throws Exception {
 		assertEquals(201, AppJson.put(port, "same", app("same", "active", URL, null, op("o", "GET", "$x/{a}", false))).statusCode());
 		assertEquals(200, AppJson.put(port, "same", app("same", "active", "http://127.0.0.1:2", null, op("o", "GET", "$x/{a}", false))).statusCode());
