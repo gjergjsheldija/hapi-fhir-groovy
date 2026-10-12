@@ -163,12 +163,37 @@ class ScriptingSecurityTest extends BaseFhirR4ForTesting {
 		assertEquals(201, ScriptJson.send(port, "PUT", "Configuration/cfg", json, "Bearer admin-token").statusCode());
 	}
 
+	// Relies on the interceptor registered in setUp(): auto-load is not wired in production (see doc/scripting.md).
 	@Test
-	void adminTokenWritesAndLoadsScript() throws Exception {
+	void adminTokenWriteLoadsScriptWhenAutoLoadIsWired() throws Exception {
 		HttpResponse<String> response = ScriptJson.send(port, "PUT", "Configuration/s3", ScriptJson.scriptConfiguration("s3"), "Bearer admin-token");
 		assertEquals(201, response.statusCode(), response.body());
 		assertTrue(exists("s3"));
 		assertTrue(ScriptJson.within(10_000, this::anyScriptLoaded), "script not loaded after an admin write");
+	}
+
+	@Test
+	void userTokenCannotWriteConfigurationInTransaction() throws Exception {
+		String bundle = """
+			{ "resourceType": "Bundle", "type": "transaction",
+			  "entry": [ { "resource": %s, "request": { "method": "PUT", "url": "Configuration/t1" } } ] }"""
+			.formatted(ScriptJson.scriptConfiguration("t1"));
+		HttpResponse<String> response = ScriptJson.send(port, "POST", "", bundle, "Bearer user-token");
+		assertEquals(403, response.statusCode(), response.body());
+		assertFalse(exists("t1"));
+	}
+
+	@Test
+	void userTokenCannotPatchConfiguration() throws Exception {
+		assertEquals(201, ScriptJson.send(port, "PUT", "Configuration/p1", ScriptJson.scriptConfiguration("p1"), "Bearer admin-token").statusCode());
+		String patch = """
+			[ { "op": "replace", "path": "/name", "value": "Changed" } ]""";
+		HttpResponse<String> response = ScriptJson.send(port, "PATCH", "Configuration/p1", "application/json-patch+json", patch,
+			"Bearer user-token", java.util.Map.of());
+		assertEquals(403, response.statusCode(), response.body());
+		Configuration stored = myConfigurationDao.read(new IdType("Configuration", "p1"), new SystemRequestDetails());
+		assertEquals("PatientCreated", stored.getName());
+		assertEquals("1", stored.getIdElement().getVersionIdPart());
 	}
 
 	@Test
