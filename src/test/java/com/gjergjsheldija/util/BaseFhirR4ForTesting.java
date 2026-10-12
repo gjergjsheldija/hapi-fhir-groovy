@@ -33,6 +33,8 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 		"hapi.fhir.custom-bean-packages=com.gjergjsheldija.configuration,com.gjergjsheldija.logging,com.gjergjsheldija.scripting,com.gjergjsheldija.app",
 		"hapi.fhir.apps.refresh-ms=3600000",
 		"hapi.fhir.apps.request-timeout-ms=2000",
+		"hapi.fhir.apps.max-request-bytes=1024",
+		"hapi.fhir.apps.max-response-bytes=1024",
 		"spring.datasource.url=jdbc:h2:mem:dbr4",
 		"hapi.fhir.enable_repository_validating_interceptor=false",
 		"hapi.fhir.fhir_version=r4",
