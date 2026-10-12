@@ -44,6 +44,7 @@ class AppAdminScopeTest extends BaseFhirR4ForTesting {
 				return switch (token) {
 					case "admin-token" -> jwt.claim("scope", "openid app:admin").build();
 					case "kc-admin-token" -> jwt.claim("realm_access", Map.of("roles", List.of("app:admin"))).build();
+					case "near-token" -> jwt.claim("scope", "app:admin-readonly app:administrator").build();
 					case "user-token" -> jwt.claim("scope", "openid").build();
 					default -> throw new BadJwtException("bad token");
 				};
@@ -128,5 +129,37 @@ class AppAdminScopeTest extends BaseFhirR4ForTesting {
 		App app = ourCtx.newJsonParser().parseResource(App.class, body("s7"));
 		appDao.update(app, new SystemRequestDetails());
 		assertTrue(exists("s7"));
+	}
+
+	@Test
+	void adminTokenTransactionWithAppSucceeds() throws Exception {
+		String bundle = """
+			{ "resourceType": "Bundle", "type": "transaction",
+			  "entry": [ { "resource": %s, "request": { "method": "PUT", "url": "App/s8" } } ] }""".formatted(body("s8"));
+		var response = AppJson.send(port, "POST", "", "application/fhir+json", bundle, "Bearer admin-token");
+		assertEquals(200, response.statusCode(), response.body());
+		assertTrue(exists("s8"));
+	}
+
+	@Test
+	void nearMissScopeIsRejected() throws Exception {
+		assertEquals(403, AppJson.put(port, "s9", body("s9"), "Bearer near-token").statusCode());
+		assertTrue(!exists("s9"));
+	}
+
+	@Test
+	void conditionalDeleteNeedsAdminScope() throws Exception {
+		assertEquals(201, AppJson.put(port, "c1", app("c1", "active", "http://localhost:1", null, op("o", "GET", "$c1", false)), "Bearer admin-token").statusCode());
+		assertEquals(201, AppJson.put(port, "c2", app("c2", "active", "http://localhost:1", null, op("o", "GET", "$c2", false)), "Bearer admin-token").statusCode());
+		assertEquals(403, AppJson.send(port, "DELETE", "App?_id=c1", null, null, "Bearer user-token").statusCode());
+		assertTrue(exists("c1"));
+		assertTrue(exists("c2"));
+	}
+
+	@Test
+	void blankAdminScopeFailsAtStartup() {
+		var e = org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+			() -> new AppValidationInterceptor(ourCtx, appDao, null, true, null, " "));
+		assertTrue(e.getMessage().contains("hapi.fhir.apps.admin-scope"));
 	}
 }

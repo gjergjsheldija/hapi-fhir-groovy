@@ -108,6 +108,9 @@ public class AppValidationInterceptor {
 	public AppValidationInterceptor(FhirContext fhirContext, IFhirResourceDao<App> appDao,
 											  ObjectProvider<RestfulServer> restfulServer, boolean securityEnabled,
 											  ObjectProvider<AccessTokenValidation> tokenValidation, String adminScope) {
+		if (adminScope == null || adminScope.isBlank()) {
+			throw new IllegalArgumentException("hapi.fhir.apps.admin-scope must not be blank");
+		}
 		this.fhirContext = fhirContext;
 		this.appDao = appDao;
 		this.restfulServer = restfulServer;
