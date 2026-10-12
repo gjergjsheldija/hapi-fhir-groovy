@@ -72,6 +72,9 @@ class PatientCreated {
 }
 ```
 
+Writing a script `Configuration` does **not** load it: scripts are loaded only via `$load-script` (admin-only
+when security is on, see [Security](#security)), and after a script change call `$load-script` again.
+
 The server provides the following API to load, unload and list scripts.
 
 ### unload
