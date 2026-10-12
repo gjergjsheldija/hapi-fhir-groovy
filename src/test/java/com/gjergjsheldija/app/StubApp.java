@@ -6,6 +6,8 @@ import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -20,6 +22,10 @@ final class StubApp implements AutoCloseable {
 	volatile String contentType = "application/json";
 	volatile String body = "{\"ok\":true}";
 	volatile long delayMs = 0;
+	/** When > 0, send status and headers (Content-Length: 100) immediately, then stall this long before the body. */
+	volatile long bodyDelayMs = 0;
+	/** Extra response headers. */
+	final Map<String, String> headers = new ConcurrentHashMap<>();
 	volatile String lastBody;
 	volatile Headers lastHeaders;
 
@@ -36,8 +42,24 @@ final class StubApp implements AutoCloseable {
 					Thread.currentThread().interrupt();
 				}
 			}
+			if (bodyDelayMs > 0) {
+				exchange.getResponseHeaders().set("Content-Type", contentType);
+				exchange.sendResponseHeaders(status, 100);
+				exchange.getResponseBody().flush();
+				try {
+					Thread.sleep(bodyDelayMs);
+					exchange.getResponseBody().write("x".repeat(100).getBytes(StandardCharsets.UTF_8));
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				} catch (IOException e) {
+					// client gave up; expected in the stalled-body test
+				}
+				exchange.close();
+				return;
+			}
 			byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
 			exchange.getResponseHeaders().set("Content-Type", contentType);
+			headers.forEach(exchange.getResponseHeaders()::set);
 			exchange.sendResponseHeaders(status, bytes.length == 0 ? -1 : bytes.length);
 			if (bytes.length > 0) {
 				exchange.getResponseBody().write(bytes);

@@ -1,7 +1,11 @@
 package com.gjergjsheldija;
 
+import ca.uhn.fhir.interceptor.api.IInterceptorService;
 import ca.uhn.fhir.jpa.starter.Application;
 import ca.uhn.fhir.rest.server.RestfulServer;
+import com.gjergjsheldija.app.AppProxyFilter;
+import com.gjergjsheldija.app.AppRouteRegistry;
+import com.gjergjsheldija.app.AppValidationInterceptor;
 import com.gjergjsheldija.auditevent.AuditEventInterceptor;
 import com.gjergjsheldija.logging.CustomLoggingInterceptor;
 import com.gjergjsheldija.scripting.ScriptingProvider;
@@ -11,6 +15,9 @@ import com.gjergjsheldija.validation.CustomRequestValidatingInterceptor;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.boot.web.servlet.filter.OrderedFormContentFilter;
+import org.springframework.context.ApplicationContext;
 import org.springframework.test.annotation.DirtiesContext;
 
 import java.util.List;
@@ -39,6 +46,12 @@ class ExtensionWiringTest {
 	@Autowired
 	RestfulServer restfulServer;
 
+	@Autowired
+	ApplicationContext applicationContext;
+
+	@Autowired
+	IInterceptorService jpaInterceptorService;
+
 	@Test
 	void extensionInterceptorsAreRegistered() {
 		List<Object> interceptors = restfulServer.getInterceptorService().getAllRegisteredInterceptors();
@@ -55,5 +68,14 @@ class ExtensionWiringTest {
 	@Test
 	void scriptingProviderIsRegistered() {
 		assertTrue(restfulServer.getPlainProviders().stream().anyMatch(ScriptingProvider.class::isInstance));
+	}
+
+	@Test
+	void appsAreWired() {
+		FilterRegistrationBean<?> registration = applicationContext.getBean("appProxyFilterRegistration", FilterRegistrationBean.class);
+		assertTrue(registration.getFilter() instanceof AppProxyFilter);
+		assertTrue(registration.getOrder() < OrderedFormContentFilter.DEFAULT_ORDER, "must run before FormContentFilter");
+		assertTrue(jpaInterceptorService.getAllRegisteredInterceptors().stream().anyMatch(AppValidationInterceptor.class::isInstance));
+		assertTrue(restfulServer.getInterceptorService().getAllRegisteredInterceptors().stream().anyMatch(AppRouteRegistry.class::isInstance));
 	}
 }

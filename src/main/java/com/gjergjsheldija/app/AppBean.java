@@ -5,6 +5,7 @@ import ca.uhn.fhir.interceptor.api.IInterceptorService;
 import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
 import ca.uhn.fhir.jpa.dao.JpaResourceDao;
 import ca.uhn.fhir.rest.server.RestfulServer;
+import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import com.gjergjsheldija.security.token.AccessTokenValidation;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.scheduling.TaskScheduler;
 
 import java.time.Duration;
@@ -57,9 +59,9 @@ public class AppBean {
 	}
 
 	@Bean
-	public AppValidationInterceptor appValidationInterceptor(AppRouteRegistry registry, IFhirResourceDao<App> appDao,
+	public AppValidationInterceptor appValidationInterceptor(IFhirResourceDao<App> appDao,
 																		 ObjectProvider<RestfulServer> restfulServer, IInterceptorService interceptorService) {
-		AppValidationInterceptor interceptor = new AppValidationInterceptor(fhirContext, registry, appDao, restfulServer);
+		AppValidationInterceptor interceptor = new AppValidationInterceptor(fhirContext, appDao, restfulServer);
 		// The JPA interceptor service sees every DAO write, including non-REST ones.
 		interceptorService.registerInterceptor(interceptor);
 		return interceptor;
@@ -71,6 +73,8 @@ public class AppBean {
 		// Two AccessTokenValidation beans exist in production (the @Component and SecurityBean's
 		// myAccessTokenValidation); SecurityInterceptor uses the latter, so must we.
 		@Qualifier("myAccessTokenValidation") ObjectProvider<AccessTokenValidation> tokenValidation,
+		// Present only when hapi.fhir.cors is configured; App responses follow the same CORS policy.
+		ObjectProvider<CorsInterceptor> corsInterceptor,
 		@Value("${hapi.fhir.security.enabled:false}") boolean securityEnabled,
 		@Value("${hapi.fhir.server_address:}") String serverAddress,
 		@Value("${hapi.fhir.apps.connect-timeout-ms:5000}") long connectTimeoutMs,
@@ -78,11 +82,13 @@ public class AppBean {
 		@Value("${hapi.fhir.apps.max-request-bytes:10485760}") int maxRequestBytes,
 		@Value("${hapi.fhir.apps.max-response-bytes:10485760}") int maxResponseBytes) {
 		// Created here, not as its own bean, so Spring Boot doesn't also map it to /*.
-		AppProxyFilter filter = new AppProxyFilter(registry, tokenValidation, securityEnabled, serverAddress,
+		AppProxyFilter filter = new AppProxyFilter(registry, tokenValidation, corsInterceptor, securityEnabled, serverAddress,
 			Duration.ofMillis(connectTimeoutMs), Duration.ofMillis(requestTimeoutMs), fhirContext, maxRequestBytes, maxResponseBytes);
 		FilterRegistrationBean<AppProxyFilter> registration = new FilterRegistrationBean<>(filter);
 		registration.setName("appProxyFilter");
 		registration.addUrlPatterns("/fhir/*");
+		// Before Spring's FormContentFilter (-9900), which would consume PUT/PATCH/DELETE form bodies.
+		registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 100);
 		return registration;
 	}
 }

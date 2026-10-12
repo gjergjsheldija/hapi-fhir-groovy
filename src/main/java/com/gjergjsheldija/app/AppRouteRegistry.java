@@ -8,6 +8,8 @@ import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.rest.api.RestOperationTypeEnum;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.api.server.SystemRequestDetails;
+import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Bundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -66,10 +68,6 @@ public class AppRouteRegistry {
 			}
 		}
 		return Optional.empty();
-	}
-
-	public List<AppRoute> routes() {
-		return snapshot.routesByMethod().values().stream().flatMap(List::stream).toList();
 	}
 
 	public synchronized boolean refresh() {
@@ -133,12 +131,27 @@ public class AppRouteRegistry {
 	public void onRequestCompleted(RequestDetails theRequestDetails) {
 		RestOperationTypeEnum type = theRequestDetails.getRestOperationType();
 		boolean appWrite = "App".equals(theRequestDetails.getResourceName()) && WRITES.contains(type);
-		// Bundles have no resource name and may delete/deactivate Apps; $expunge removes them.
-		boolean bundle = type == RestOperationTypeEnum.TRANSACTION || type == RestOperationTypeEnum.BATCH;
+		// Bundles have no resource name; refresh only when one touches App. $expunge removes Apps.
+		boolean bundle = (type == RestOperationTypeEnum.TRANSACTION || type == RestOperationTypeEnum.BATCH)
+			&& touchesApp(theRequestDetails.getResource());
 		boolean expunge = EXTENDED_OPS.contains(type) && "$expunge".equals(theRequestDetails.getOperation());
 		if (appWrite || bundle || expunge) {
 			refreshQuietly();
 		}
+	}
+
+	private static boolean touchesApp(IBaseResource theRequestBundle) {
+		if (!(theRequestBundle instanceof Bundle bundle)) {
+			return false;
+		}
+		for (Bundle.BundleEntryComponent entry : bundle.getEntry()) {
+			String url = entry.getRequest().getUrl();
+			if (entry.getResource() instanceof App
+				|| (url != null && (url.equals("App") || url.startsWith("App/") || url.startsWith("App?")))) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@EventListener(ApplicationReadyEvent.class)

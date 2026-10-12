@@ -7,7 +7,9 @@ import ca.uhn.fhir.rest.api.server.IBundleProvider;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.server.exceptions.InternalErrorException;
 import org.hl7.fhir.instance.model.api.IBaseResource;
+import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.IdType;
+import org.hl7.fhir.r4.model.Patient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.scheduling.TaskScheduler;
@@ -66,6 +68,12 @@ class AppRouteRegistryFailureTest {
 		return rd;
 	}
 
+	private static RequestDetails bundleRequest(RestOperationTypeEnum type, Bundle bundle) {
+		RequestDetails rd = request(null, type, null);
+		when(rd.getResource()).thenReturn(bundle);
+		return rd;
+	}
+
 	@Test
 	void failedRefreshKeepsPreviousSnapshot() {
 		searchReturnsValidAppThenFails();
@@ -88,12 +96,31 @@ class AppRouteRegistryFailureTest {
 		when(empty.getAllResources()).thenReturn(List.of());
 		when(dao.search(any(SearchParameterMap.class), any(RequestDetails.class))).thenReturn(empty);
 
-		registry.onRequestCompleted(request(null, RestOperationTypeEnum.TRANSACTION, null));
-		registry.onRequestCompleted(request(null, RestOperationTypeEnum.BATCH, null));
+		Bundle withApp = new Bundle();
+		withApp.addEntry().setResource(validApp()).getRequest().setMethod(Bundle.HTTPVerb.PUT).setUrl("App/a1");
+		Bundle deletesApp = new Bundle();
+		deletesApp.addEntry().getRequest().setMethod(Bundle.HTTPVerb.DELETE).setUrl("App/a1");
+		Bundle conditionalApp = new Bundle();
+		conditionalApp.addEntry().getRequest().setMethod(Bundle.HTTPVerb.DELETE).setUrl("App?status=inactive");
+
+		registry.onRequestCompleted(bundleRequest(RestOperationTypeEnum.TRANSACTION, withApp));
+		registry.onRequestCompleted(bundleRequest(RestOperationTypeEnum.BATCH, deletesApp));
+		registry.onRequestCompleted(bundleRequest(RestOperationTypeEnum.TRANSACTION, conditionalApp));
 		registry.onRequestCompleted(request(null, RestOperationTypeEnum.EXTENDED_OPERATION_SERVER, "$expunge"));
 		registry.onRequestCompleted(request("Patient", RestOperationTypeEnum.EXTENDED_OPERATION_TYPE, "$expunge"));
 		registry.onRequestCompleted(request("Patient", RestOperationTypeEnum.EXTENDED_OPERATION_INSTANCE, "$expunge"));
-		verify(dao, times(5)).search(any(SearchParameterMap.class), any(RequestDetails.class));
+		verify(dao, times(6)).search(any(SearchParameterMap.class), any(RequestDetails.class));
+	}
+
+	@Test
+	void bundlesWithoutAppEntriesDoNotRefresh() {
+		Bundle patientsOnly = new Bundle();
+		patientsOnly.addEntry().setResource(new Patient()).getRequest().setMethod(Bundle.HTTPVerb.POST).setUrl("Patient");
+		patientsOnly.addEntry().getRequest().setMethod(Bundle.HTTPVerb.DELETE).setUrl("Appointment/1");
+		registry.onRequestCompleted(bundleRequest(RestOperationTypeEnum.TRANSACTION, patientsOnly));
+		registry.onRequestCompleted(bundleRequest(RestOperationTypeEnum.BATCH, patientsOnly));
+		registry.onRequestCompleted(bundleRequest(RestOperationTypeEnum.TRANSACTION, null));
+		verify(dao, never()).search(any(SearchParameterMap.class), any(RequestDetails.class));
 	}
 
 	@Test

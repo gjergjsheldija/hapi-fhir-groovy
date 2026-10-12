@@ -1,6 +1,7 @@
 package com.gjergjsheldija.app;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gjergjsheldija.security.token.AccessTokenValidation;
 import jakarta.servlet.FilterChain;
@@ -12,10 +13,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.web.cors.DefaultCorsProcessor;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpConnectTimeoutException;
@@ -28,6 +31,11 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Routes requests that match an active App operation to that App; everything else continues to HAPI.
@@ -39,6 +47,7 @@ public class AppProxyFilter extends OncePerRequestFilter {
 
 	private final AppRouteRegistry registry;
 	private final ObjectProvider<AccessTokenValidation> tokenValidation;
+	private final ObjectProvider<CorsInterceptor> corsInterceptor;
 	private final boolean securityEnabled;
 	private final String serverAddress;
 	private final Duration requestTimeout;
@@ -49,17 +58,27 @@ public class AppProxyFilter extends OncePerRequestFilter {
 	private final ObjectMapper mapper = new ObjectMapper();
 
 	public AppProxyFilter(AppRouteRegistry registry, ObjectProvider<AccessTokenValidation> tokenValidation,
-								 boolean securityEnabled, String serverAddress, Duration connectTimeout, Duration requestTimeout,
+								 ObjectProvider<CorsInterceptor> corsInterceptor, boolean securityEnabled, String serverAddress, Duration connectTimeout, Duration requestTimeout,
 								 FhirContext fhirContext, int maxRequestBytes, int maxResponseBytes) {
-		this.maxRequestBytes = maxRequestBytes;
-		this.maxResponseBytes = maxResponseBytes;
+		this.maxRequestBytes = checkLimit("hapi.fhir.apps.max-request-bytes", maxRequestBytes);
+		this.maxResponseBytes = checkLimit("hapi.fhir.apps.max-response-bytes", maxResponseBytes);
 		this.registry = registry;
 		this.tokenValidation = tokenValidation;
+		this.corsInterceptor = corsInterceptor;
 		this.securityEnabled = securityEnabled;
 		this.serverAddress = serverAddress;
 		this.requestTimeout = requestTimeout;
 		this.fhirContext = fhirContext;
-		this.httpClient = HttpClient.newBuilder().connectTimeout(connectTimeout).build();
+		// HTTP/1.1: no h2c upgrade attempt against plain-http Apps.
+		this.httpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).connectTimeout(connectTimeout).build();
+	}
+
+	/** The caps are read with readNBytes(limit + 1), so Integer.MAX_VALUE would overflow. */
+	private static int checkLimit(String key, int value) {
+		if (value <= 0 || value == Integer.MAX_VALUE) {
+			throw new IllegalArgumentException(key + " must be between 1 and " + (Integer.MAX_VALUE - 1) + ", was " + value);
+		}
+		return value;
 	}
 
 	@Override
@@ -73,6 +92,12 @@ public class AppProxyFilter extends OncePerRequestFilter {
 		long start = System.nanoTime();
 		AppRoute route = match.get().route();
 		try {
+			// App responses bypass HAPI's CorsInterceptor, so apply the same CORS config here.
+			// On rejection the processor has already written the 403.
+			CorsInterceptor cors = corsInterceptor.getIfAvailable();
+			if (cors != null && !new DefaultCorsProcessor().processRequest(cors.getConfig(), request, response)) {
+				return;
+			}
 			if (securityEnabled && !route.isPublic() && !isAuthorized(request)) {
 				writeError(response, 401, "Missing or invalid access token");
 				return;
@@ -105,7 +130,8 @@ public class AppProxyFilter extends OncePerRequestFilter {
 		}
 	}
 
-	private void forward(AppRouteRegistry.Match match, HttpServletRequest request, HttpServletResponse response) throws IOException {
+	private void forward(AppRouteRegistry.Match match, HttpServletRequest request, HttpServletResponse response)
+		throws IOException, ServletException {
 		AppRoute route = match.route();
 		if (request.getContentLengthLong() > maxRequestBytes) {
 			writeError(response, 413, "Request body exceeds hapi.fhir.apps.max-request-bytes");
@@ -134,33 +160,70 @@ public class AppProxyFilter extends OncePerRequestFilter {
 			outbound.header("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8)));
 		}
 
-		HttpResponse<InputStream> appResponse;
+		// HttpRequest.timeout stops applying once headers arrive, so one deadline covers headers + body.
+		AtomicReference<InputStream> bodyStream = new AtomicReference<>();
+		CompletableFuture<AppReply> future = httpClient.sendAsync(outbound.build(), HttpResponse.BodyHandlers.ofInputStream())
+			.thenApply(r -> {
+				bodyStream.set(r.body());
+				return readCapped(r);
+			});
+		AppReply reply;
 		try {
-			appResponse = httpClient.send(outbound.build(), HttpResponse.BodyHandlers.ofInputStream());
-		} catch (HttpConnectTimeoutException e) {
-			writeError(response, 502, "App " + route.appId() + " is unreachable");
-			return;
-		} catch (HttpTimeoutException e) {
+			reply = future.get(requestTimeout.toMillis(), TimeUnit.MILLISECONDS);
+		} catch (TimeoutException e) {
+			future.cancel(true);
+			closeQuietly(bodyStream.get());
 			writeError(response, 504, "App " + route.appId() + " did not respond in time");
-			return;
-		} catch (IOException e) {
-			writeError(response, 502, "App " + route.appId() + " is unreachable");
 			return;
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
+			future.cancel(true);
+			closeQuietly(bodyStream.get());
 			writeError(response, 502, "Interrupted while calling App " + route.appId());
+			return;
+		} catch (ExecutionException e) {
+			Throwable cause = e.getCause() instanceof UncheckedIOException u ? u.getCause() : e.getCause();
+			if (cause instanceof HttpTimeoutException && !(cause instanceof HttpConnectTimeoutException)) {
+				writeError(response, 504, "App " + route.appId() + " did not respond in time");
+			} else if (cause instanceof IOException) {
+				writeError(response, 502, "App " + route.appId() + " is unreachable");
+			} else {
+				throw new ServletException("Calling App " + route.appId() + " failed", cause);
+			}
 			return;
 		}
 
+		if (reply.body() == null) {
+			writeError(response, 502, "App " + route.appId() + " response exceeds hapi.fhir.apps.max-response-bytes");
+			return;
+		}
+		response.setStatus(reply.status());
+		reply.contentType().ifPresent(response::setContentType);
+		response.getOutputStream().write(reply.body());
+	}
+
+	/** body is null when the App's response is over max-response-bytes. */
+	private record AppReply(int status, Optional<String> contentType, byte[] body) {
+	}
+
+	private AppReply readCapped(HttpResponse<InputStream> appResponse) {
 		try (InputStream in = appResponse.body()) {
 			byte[] appBody = in.readNBytes(maxResponseBytes + 1);
-			if (appBody.length > maxResponseBytes) {
-				writeError(response, 502, "App " + route.appId() + " response exceeds hapi.fhir.apps.max-response-bytes");
-				return;
-			}
-			response.setStatus(appResponse.statusCode());
-			appResponse.headers().firstValue("Content-Type").ifPresent(response::setContentType);
-			response.getOutputStream().write(appBody);
+			return new AppReply(appResponse.statusCode(), appResponse.headers().firstValue("Content-Type"),
+				appBody.length > maxResponseBytes ? null : appBody);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+
+	private static void closeQuietly(InputStream in) {
+		if (in == null) {
+			return;
+		}
+		try {
+			in.close();
+		} catch (IOException e) {
+			ourLog.debug("Closing timed-out App response stream failed: {}", e.getMessage());
 		}
 	}
 

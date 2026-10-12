@@ -19,6 +19,7 @@ import static com.gjergjsheldija.app.AppJson.app;
 import static com.gjergjsheldija.app.AppJson.op;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
@@ -89,6 +90,26 @@ class AppProxyFilterTest extends BaseFhirR4ForTesting {
 	}
 
 	@Test
+	void formEncodedPutBodyIsForwardedIntact() throws Exception {
+		HttpResponse<String> put = AppJson.put(port, "myorg.putapp", app("myorg.putapp", "active", stub.url(), null,
+			op("update-profile", "PUT", "$profile", false)));
+		assertEquals(201, put.statusCode(), put.body());
+		registry.refresh();
+		// Spring's FormContentFilter would otherwise consume PUT/PATCH/DELETE form bodies first.
+		AppJson.send(port, "PUT", "$profile", "application/x-www-form-urlencoded", "a=1&b=2", null);
+		JsonNode env = mapper.readTree(stub.lastBody);
+		assertEquals("a=1&b=2", env.get("request").get("resource").asText());
+	}
+
+	@Test
+	void appCallsUseHttp11WithoutUpgrade() throws Exception {
+		register("active", stub.url());
+		AppJson.send(port, "GET", "Patient/$daily-report/2024-01-01", null, null, null);
+		assertEquals(1, stub.calls.get());
+		assertNull(stub.lastHeaders.getFirst("Upgrade"), String.valueOf(stub.lastHeaders.entrySet()));
+	}
+
+	@Test
 	void unreachableAppGives502() throws Exception {
 		String url = stub.url();
 		stub.close();
@@ -104,6 +125,17 @@ class AppProxyFilterTest extends BaseFhirR4ForTesting {
 		stub.delayMs = 4000; // test base sets request-timeout-ms=2000
 		HttpResponse<String> response = AppJson.send(port, "POST", "User/$register", null, null, null);
 		assertEquals(504, response.statusCode(), response.body());
+	}
+
+	@Test
+	void stalledResponseBodyGives504WithinDeadline() throws Exception {
+		register("active", stub.url());
+		stub.bodyDelayMs = 4000; // headers arrive at once; request-timeout-ms=2000 must still cover the body
+		long start = System.nanoTime();
+		HttpResponse<String> response = AppJson.send(port, "POST", "User/$register", null, null, null);
+		long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+		assertEquals(504, response.statusCode(), response.body());
+		assertTrue(elapsedMs < 3500, "took " + elapsedMs + " ms");
 	}
 
 	@Test

@@ -30,8 +30,12 @@ PUT /fhir/App/myorg.myapp
 - Colliding Apps are rejected with 422, including two Apps within one transaction Bundle. Two routes collide
   when they are ambiguous (same method and equal-specificity overlapping paths); a more specific route
   still coexists with a less specific one.
-- Changes apply immediately on the node that received the write and within
-  `hapi.fhir.apps.refresh-ms` (default 30 s) on other nodes.
+- REST writes to `App`, and transaction/batch Bundles containing `App` entries, refresh the routes
+  on the node that received them right after the response is sent (see #19). Other writes (DAO
+  calls, scripts) and other nodes pick changes up within `hapi.fhir.apps.refresh-ms` (default 30 s).
+- App routes can't be called from inside a transaction/batch Bundle: they are not FHIR interactions.
+- With `REQUEST_VALIDATION=true`, Bundles containing `App` entries are validated and may be
+  rejected; only top-level `App` writes skip request validation.
 
 ## What the app receives
 
@@ -56,6 +60,10 @@ All request headers are forwarded to the App, including the user's `Authorizatio
 
 The App's status code, `Content-Type` and body are returned to the client. Other response headers
 (e.g. `Set-Cookie`, `Location`) are dropped, and redirects are not followed.
+
+App responses follow the server's CORS configuration (`hapi.fhir.cors`): allowed origins get the
+usual CORS headers, other cross-origin requests get 403 without calling the App. CORS headers set
+by the App itself are dropped.
 
 ## Limits
 
@@ -94,7 +102,8 @@ Check the `Authorization` header against your secret before trusting the call.
 | Request body over `max-request-bytes` | 413 |
 | Invalid App resource | 422 |
 | App unreachable | 502 |
-| App slower than `hapi.fhir.apps.request-timeout-ms` | 504 |
+| App response larger than `max-response-bytes` | 502 |
+| App slower than `hapi.fhir.apps.request-timeout-ms` (headers and body together) | 504 |
 
 ## Configuration
 
@@ -116,3 +125,5 @@ hapi:
 - `endpoint.secret` is returned on reads to anyone allowed to read `App` resources.
 - App calls bypass HAPI's interceptor chain: no BALP `AuditEvent`, consent or request-validation
   interceptors run for them. Apps that handle PHI must audit themselves.
+- An App can return any Content-Type, including HTML or JavaScript, which is then served from the
+  FHIR server's own origin (the same origin as the Testpage UI). Only register Apps you trust.
