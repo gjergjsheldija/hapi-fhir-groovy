@@ -60,8 +60,12 @@ public class AppBean {
 
 	@Bean
 	public AppValidationInterceptor appValidationInterceptor(IFhirResourceDao<App> appDao,
-																		 ObjectProvider<RestfulServer> restfulServer, IInterceptorService interceptorService) {
-		AppValidationInterceptor interceptor = new AppValidationInterceptor(fhirContext, appDao, restfulServer);
+																		 ObjectProvider<RestfulServer> restfulServer, IInterceptorService interceptorService,
+																		 @Value("${hapi.fhir.security.enabled:false}") boolean securityEnabled,
+																		 @Qualifier("myAccessTokenValidation") ObjectProvider<AccessTokenValidation> tokenValidation,
+																		 @Value("${hapi.fhir.apps.admin-scope:app:admin}") String adminScope) {
+		AppValidationInterceptor interceptor = new AppValidationInterceptor(fhirContext, appDao, restfulServer,
+			securityEnabled, tokenValidation, adminScope);
 		// The JPA interceptor service sees every DAO write, including non-REST ones.
 		interceptorService.registerInterceptor(interceptor);
 		return interceptor;

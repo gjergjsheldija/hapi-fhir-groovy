@@ -20,6 +20,10 @@ PUT /fhir/App/myorg.myapp
 }
 ```
 
+When `SECURITY_ENABLED=true`, creating, updating or deleting an App requires a token with the scope
+`hapi.fhir.apps.admin-scope` (default `app:admin`) in its `scope`/`scp` claim or Keycloak
+`realm_access.roles`; other callers get 403. Reads are not restricted.
+
 - `status`: `active` routes the operations; `inactive` keeps the App stored but unrouted.
 - `path`: relative to `/fhir/`, `{name}` segments become route params. If the first segment is a
   resource type, the second must start with `$` (Apps can't shadow `GET /Patient/123`).
@@ -100,6 +104,7 @@ Check the `Authorization` header against your secret before trusting the call.
 | Missing/invalid token on a non-public operation (`SECURITY_ENABLED=true`) | 401 |
 | Malformed query string | 400 |
 | Request body over `max-request-bytes` | 413 |
+| Writing an App without the admin scope (`SECURITY_ENABLED=true`) | 403 |
 | Invalid App resource | 422 |
 | App unreachable | 502 |
 | App response larger than `max-response-bytes` | 502 |
@@ -116,6 +121,7 @@ hapi:
       request-timeout-ms: 30000
       max-request-bytes: 10485760
       max-response-bytes: 10485760
+      admin-scope: app:admin
 ```
 
 ## Security notes (accepted risks)
