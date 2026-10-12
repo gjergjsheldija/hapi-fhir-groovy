@@ -6,6 +6,7 @@ import ca.uhn.fhir.jpa.api.dao.IFhirResourceDao;
 import ca.uhn.fhir.jpa.dao.JpaResourceDao;
 import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.interceptor.CorsInterceptor;
+import com.gjergjsheldija.security.AdminScopeGuard;
 import com.gjergjsheldija.security.token.AccessTokenValidation;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -58,14 +59,20 @@ public class AppBean {
 		return registry;
 	}
 
+	/** One admin scope for Apps and scripting; defined here because the app package is scanned in production and tests. */
+	@Bean
+	public AdminScopeGuard adminScopeGuard(
+		@Value("${hapi.fhir.security.enabled:false}") boolean securityEnabled,
+		@Qualifier("myAccessTokenValidation") ObjectProvider<AccessTokenValidation> tokenValidation,
+		@Value("${hapi.fhir.apps.admin-scope:app:admin}") String adminScope) {
+		return new AdminScopeGuard(securityEnabled, tokenValidation, adminScope);
+	}
+
 	@Bean
 	public AppValidationInterceptor appValidationInterceptor(IFhirResourceDao<App> appDao,
 																		 ObjectProvider<RestfulServer> restfulServer, IInterceptorService interceptorService,
-																		 @Value("${hapi.fhir.security.enabled:false}") boolean securityEnabled,
-																		 @Qualifier("myAccessTokenValidation") ObjectProvider<AccessTokenValidation> tokenValidation,
-																		 @Value("${hapi.fhir.apps.admin-scope:app:admin}") String adminScope) {
-		AppValidationInterceptor interceptor = new AppValidationInterceptor(fhirContext, appDao, restfulServer,
-			securityEnabled, tokenValidation, adminScope);
+																		 AdminScopeGuard adminScopeGuard) {
+		AppValidationInterceptor interceptor = new AppValidationInterceptor(fhirContext, appDao, restfulServer, adminScopeGuard);
 		// The JPA interceptor service sees every DAO write, including non-REST ones.
 		interceptorService.registerInterceptor(interceptor);
 		return interceptor;
