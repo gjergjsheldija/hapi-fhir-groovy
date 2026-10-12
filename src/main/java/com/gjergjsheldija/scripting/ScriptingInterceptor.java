@@ -15,13 +15,18 @@ package com.gjergjsheldija.scripting;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
-import ca.uhn.fhir.rest.api.RestOperationTypeEnum;
-import ca.uhn.fhir.rest.api.server.RequestDetails;
 import com.gjergjsheldija.configuration.Configuration;
+import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+/**
+ * Loads a script Configuration when it is stored. Not registered by the server (scripts load via $load-script,
+ * see doc/scripting.md); if wired, register it on the JPA interceptor service.
+ */
 @Component
 @Interceptor
 public class ScriptingInterceptor {
@@ -34,14 +39,32 @@ public class ScriptingInterceptor {
 	}
 
 	/**
-	 * Only after a successful create/update: the resource here is the request body, so a rejected write must not load it.
-	 * PATCH bodies are not Configurations; patched scripts are (re)loaded via $load-script.
+	 * PRECOMMIT fires only for real writes (not a failed request or a matched conditional create), after the
+	 * PRESTORAGE checks, with the resource actually stored.
 	 */
-	@Hook(Pointcut.SERVER_PROCESSING_COMPLETED_NORMALLY)
-	public void scriptUpdated(RequestDetails requestDetails) {
-		RestOperationTypeEnum operation = requestDetails.getRestOperationType();
-		if ((operation == RestOperationTypeEnum.CREATE || operation == RestOperationTypeEnum.UPDATE)
-				&& requestDetails.getResource() instanceof Configuration configuration) {
+	@Hook(Pointcut.STORAGE_PRECOMMIT_RESOURCE_CREATED)
+	public void onCreated(IBaseResource theResource) {
+		afterCommit(theResource);
+	}
+
+	@Hook(Pointcut.STORAGE_PRECOMMIT_RESOURCE_UPDATED)
+	public void onUpdated(IBaseResource theOldResource, IBaseResource theNewResource) {
+		afterCommit(theNewResource);
+	}
+
+	/** Load only once the write is committed, so a rolled-back write loads nothing. */
+	private void afterCommit(IBaseResource theResource) {
+		if (!(theResource instanceof Configuration configuration)) {
+			return;
+		}
+		if (TransactionSynchronizationManager.isSynchronizationActive()) {
+			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+				@Override
+				public void afterCommit() {
+					processResource(configuration);
+				}
+			});
+		} else {
 			processResource(configuration);
 		}
 	}

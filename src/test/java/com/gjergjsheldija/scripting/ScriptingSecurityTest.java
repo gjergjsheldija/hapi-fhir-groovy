@@ -1,10 +1,10 @@
 package com.gjergjsheldija.scripting;
 
 import ca.uhn.fhir.context.FhirContext;
+import ca.uhn.fhir.interceptor.api.IInterceptorService;
 import ca.uhn.fhir.jpa.searchparam.SearchParameterMap;
 import ca.uhn.fhir.rest.api.server.SystemRequestDetails;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
-import ca.uhn.fhir.rest.server.RestfulServer;
 import ca.uhn.fhir.rest.server.exceptions.ResourceGoneException;
 import ca.uhn.fhir.rest.server.exceptions.ResourceNotFoundException;
 import com.gjergjsheldija.configuration.Configuration;
@@ -64,7 +64,7 @@ class ScriptingSecurityTest extends BaseFhirR4ForTesting {
 	}
 
 	@Autowired
-	RestfulServer restfulServer;
+	IInterceptorService jpaInterceptorService;
 
 	@Autowired
 	ScriptingInterceptor scriptingInterceptor;
@@ -80,8 +80,8 @@ class ScriptingSecurityTest extends BaseFhirR4ForTesting {
 		ourCtx = FhirContext.forR4();
 		ourCtx.getRestfulClientFactory().setServerValidationMode(ServerValidationModeEnum.NEVER);
 		ourClient = ourCtx.newRestfulGenericClient("http://localhost:" + port + "/fhir/");
-		// The server does not register ScriptingInterceptor itself (not in custom-interceptor-classes), so do it here.
-		restfulServer.registerInterceptor(scriptingInterceptor);
+		// The server does not register ScriptingInterceptor (auto-load is not wired, see doc/scripting.md), so do it here.
+		jpaInterceptorService.registerInterceptor(scriptingInterceptor);
 
 		// $load-script looks the script up by name (string) and type/status (token): install those search parameters.
 		// Like ConfigurationTest, but type/status must be TOKEN - ScriptingProvider searches them with TokenParam (HAPI-1257 otherwise).
@@ -99,7 +99,7 @@ class ScriptingSecurityTest extends BaseFhirR4ForTesting {
 
 	@AfterEach
 	void tearDown() {
-		restfulServer.unregisterInterceptor(scriptingInterceptor);
+		jpaInterceptorService.unregisterInterceptor(scriptingInterceptor);
 		scriptingSvc.unloadInterceptors();
 		interceptorSvc.unloadCustomScript("PatientCreated");
 		cleanUp();
@@ -173,6 +173,8 @@ class ScriptingSecurityTest extends BaseFhirR4ForTesting {
 
 	@Test
 	void scriptOperationsNeedAdminScope() throws Exception {
+		// This test is about $load-script, so the stored script must not be auto-loaded on write.
+		jpaInterceptorService.unregisterInterceptor(scriptingInterceptor);
 		storeScriptInternally("s4");
 		HttpResponse<String> load = ScriptJson.send(port, "POST", "Configuration/$load-script", LOAD_PARAMS, "Bearer user-token");
 		assertEquals(403, load.statusCode(), load.body());
