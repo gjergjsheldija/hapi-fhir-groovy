@@ -107,6 +107,17 @@ class AppProxyFilterTest extends BaseFhirR4ForTesting {
 	}
 
 	@Test
+	void stalledResponseBodyGives504WithinDeadline() throws Exception {
+		register("active", stub.url());
+		stub.bodyDelayMs = 4000; // headers arrive at once; request-timeout-ms=2000 must still cover the body
+		long start = System.nanoTime();
+		HttpResponse<String> response = AppJson.send(port, "POST", "User/$register", null, null, null);
+		long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+		assertEquals(504, response.statusCode(), response.body());
+		assertTrue(elapsedMs < 3500, "took " + elapsedMs + " ms");
+	}
+
+	@Test
 	void inactiveAppFallsThroughToHapi() throws Exception {
 		register("inactive", stub.url());
 		HttpResponse<String> response = AppJson.send(port, "GET", "Patient/$daily-report/2024-01-01", null, null, null);

@@ -18,6 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpConnectTimeoutException;
@@ -30,6 +31,11 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Routes requests that match an active App operation to that App; everything else continues to HAPI.
@@ -115,7 +121,8 @@ public class AppProxyFilter extends OncePerRequestFilter {
 		}
 	}
 
-	private void forward(AppRouteRegistry.Match match, HttpServletRequest request, HttpServletResponse response) throws IOException {
+	private void forward(AppRouteRegistry.Match match, HttpServletRequest request, HttpServletResponse response)
+		throws IOException, ServletException {
 		AppRoute route = match.route();
 		if (request.getContentLengthLong() > maxRequestBytes) {
 			writeError(response, 413, "Request body exceeds hapi.fhir.apps.max-request-bytes");
@@ -144,33 +151,70 @@ public class AppProxyFilter extends OncePerRequestFilter {
 			outbound.header("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8)));
 		}
 
-		HttpResponse<InputStream> appResponse;
+		// HttpRequest.timeout stops applying once headers arrive, so one deadline covers headers + body.
+		AtomicReference<InputStream> bodyStream = new AtomicReference<>();
+		CompletableFuture<AppReply> future = httpClient.sendAsync(outbound.build(), HttpResponse.BodyHandlers.ofInputStream())
+			.thenApply(r -> {
+				bodyStream.set(r.body());
+				return readCapped(r);
+			});
+		AppReply reply;
 		try {
-			appResponse = httpClient.send(outbound.build(), HttpResponse.BodyHandlers.ofInputStream());
-		} catch (HttpConnectTimeoutException e) {
-			writeError(response, 502, "App " + route.appId() + " is unreachable");
-			return;
-		} catch (HttpTimeoutException e) {
+			reply = future.get(requestTimeout.toMillis(), TimeUnit.MILLISECONDS);
+		} catch (TimeoutException e) {
+			future.cancel(true);
+			closeQuietly(bodyStream.get());
 			writeError(response, 504, "App " + route.appId() + " did not respond in time");
-			return;
-		} catch (IOException e) {
-			writeError(response, 502, "App " + route.appId() + " is unreachable");
 			return;
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
+			future.cancel(true);
+			closeQuietly(bodyStream.get());
 			writeError(response, 502, "Interrupted while calling App " + route.appId());
+			return;
+		} catch (ExecutionException e) {
+			Throwable cause = e.getCause() instanceof UncheckedIOException u ? u.getCause() : e.getCause();
+			if (cause instanceof HttpTimeoutException && !(cause instanceof HttpConnectTimeoutException)) {
+				writeError(response, 504, "App " + route.appId() + " did not respond in time");
+			} else if (cause instanceof IOException) {
+				writeError(response, 502, "App " + route.appId() + " is unreachable");
+			} else {
+				throw new ServletException("Calling App " + route.appId() + " failed", cause);
+			}
 			return;
 		}
 
+		if (reply.body() == null) {
+			writeError(response, 502, "App " + route.appId() + " response exceeds hapi.fhir.apps.max-response-bytes");
+			return;
+		}
+		response.setStatus(reply.status());
+		reply.contentType().ifPresent(response::setContentType);
+		response.getOutputStream().write(reply.body());
+	}
+
+	/** body is null when the App's response is over max-response-bytes. */
+	private record AppReply(int status, Optional<String> contentType, byte[] body) {
+	}
+
+	private AppReply readCapped(HttpResponse<InputStream> appResponse) {
 		try (InputStream in = appResponse.body()) {
 			byte[] appBody = in.readNBytes(maxResponseBytes + 1);
-			if (appBody.length > maxResponseBytes) {
-				writeError(response, 502, "App " + route.appId() + " response exceeds hapi.fhir.apps.max-response-bytes");
-				return;
-			}
-			response.setStatus(appResponse.statusCode());
-			appResponse.headers().firstValue("Content-Type").ifPresent(response::setContentType);
-			response.getOutputStream().write(appBody);
+			return new AppReply(appResponse.statusCode(), appResponse.headers().firstValue("Content-Type"),
+				appBody.length > maxResponseBytes ? null : appBody);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+
+	private static void closeQuietly(InputStream in) {
+		if (in == null) {
+			return;
+		}
+		try {
+			in.close();
+		} catch (IOException e) {
+			ourLog.debug("Closing timed-out App response stream failed: {}", e.getMessage());
 		}
 	}
 
